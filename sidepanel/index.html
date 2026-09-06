@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aether</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div>
+        <p class="wordmark">Aether</p>
+        <p class="meta" id="engine-label">On-device · local-first</p>
+      </div>
+      <button type="button" class="btn primary" id="extract-btn">Extract</button>
+    </header>
+    <div class="toolbar">
+      <button type="button" class="icon" id="undo-btn" title="Undo">↩</button>
+      <button type="button" class="icon" id="redo-btn" title="Redo">↪</button>
+      <label class="toggle">
+        <input type="checkbox" id="pii-toggle" />
+        Mask PII
+      </label>
+      <button type="button" class="btn ghost" id="json-btn">JSON</button>
+      <button type="button" class="btn ghost" id="md-btn">MD</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab on" data-tab="record">Record</button>
+      <button type="button" class="tab" data-tab="sources">Sources</button>
+      <button type="button" class="tab" data-tab="log">Log</button>
+    </nav>
+    <main id="panel-body">
+      <div class="empty">
+        <p class="serif">Empty dossier</p>
+        <p>Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.</p>
+      </div>
+    </main>
+    <dialog id="conflict">
+      <h2 class="serif">Merge conflict</h2>
+      <p class="muted">Self-heal found values for fields you already edited.</p>
+      <div id="conflict-list"></div>
+      <div class="row">
+        <button type="button" class="btn ghost" id="keep-btn">Keep mine</button>
+        <button type="button" class="btn primary" id="take-btn">Take incoming</button>
+      </div>
+    </dialog>
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>
