@@ -47,6 +47,11 @@ side panel      →  editable record, confidence, sources, log
 
 Circuit breakers: max depth 2, max 4 pages, visited-URL registry.
 
+## Roadmap
+
+v2.0 is the scaffold (MV3, sanitize, Nano/heuristic, self-heal, dossier UI).
+Remaining work is tracked in [`PLAN.md`](./PLAN.md) / [`plan.json`](./plan.json). An hourly automation implements **one pending item per run**.
+
 ## Privacy
 
 - PII mask toggle redacts emails and phones in the UI and in exports.
