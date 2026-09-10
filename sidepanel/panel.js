@@ -1,4 +1,5 @@
 import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson } from "../lib/engine.js";
+import { loadHistory, saveHistory, originFromRecord } from "../lib/history.js";
 
 const state = {
   record: null,
@@ -9,16 +10,29 @@ const state = {
   past: [],
   future: [],
   error: "",
+  origin: "",
 };
 
 const $ = (id) => document.getElementById(id);
 const body = $("panel-body");
+
+async function persistHistory() {
+  const origin = state.origin || originFromRecord(state.record);
+  if (!origin) return;
+  state.origin = origin;
+  await saveHistory(origin, {
+    record: state.record,
+    past: state.past,
+    future: state.future,
+  });
+}
 
 function snapshot() {
   if (!state.record) return;
   state.past.push(structuredClone(state.record));
   if (state.past.length > 40) state.past.shift();
   state.future = [];
+  persistHistory();
 }
 
 function render() {
@@ -86,6 +100,7 @@ function render() {
       rec.fields[key].value = el.value;
       rec.fields[key].dirty = true;
       rec.fields[key].verified = true;
+      persistHistory();
     });
   });
   body.querySelectorAll("[data-exec]").forEach((el) => {
@@ -96,6 +111,7 @@ function render() {
         exec[el.getAttribute("data-k")] = el.value;
         exec.dirty = true;
         exec.verified = true;
+        persistHistory();
       }
     });
   });
@@ -115,9 +131,9 @@ function empty() {
 
 function esc(s) {
   return String(s || "")
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/"/g, """);
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
 }
 
 $("extract-btn").addEventListener("click", async () => {
@@ -140,6 +156,8 @@ $("extract-btn").addEventListener("click", async () => {
   state.conflicts = res.conflicts || [];
   state.past = [];
   state.future = [];
+  state.origin = originFromRecord(res.record);
+  await persistHistory();
   $("engine-label").textContent = res.engine === "nano" ? "Gemini Nano" : "Heuristic · Nano unavailable";
   state.tab = "record";
   render();
@@ -156,6 +174,7 @@ $("extract-btn").addEventListener("click", async () => {
 
 $("keep-btn").addEventListener("click", () => $("conflict").close());
 $("take-btn").addEventListener("click", () => {
+  snapshot();
   for (const c of state.conflicts) {
     if (state.record?.fields[c.key]) {
       state.record.fields[c.key].value = c.incoming;
@@ -163,6 +182,7 @@ $("take-btn").addEventListener("click", () => {
     }
   }
   $("conflict").close();
+  persistHistory();
   render();
 });
 
@@ -178,6 +198,7 @@ $("undo-btn").addEventListener("click", () => {
   if (!prev || !state.record) return;
   state.future.push(structuredClone(state.record));
   state.record = prev;
+  persistHistory();
   render();
 });
 $("redo-btn").addEventListener("click", () => {
@@ -185,6 +206,7 @@ $("redo-btn").addEventListener("click", () => {
   if (!next || !state.record) return;
   state.past.push(structuredClone(state.record));
   state.record = next;
+  persistHistory();
   render();
 });
 $("pii-toggle").addEventListener("change", (e) => {
@@ -222,4 +244,20 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-render();
+async function restoreForActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (!tab?.url) return;
+    const origin = new URL(tab.url).origin;
+    state.origin = origin;
+    const hist = await loadHistory(origin);
+    if (!hist?.record) return;
+    state.record = hist.record;
+    state.past = hist.past || [];
+    state.future = hist.future || [];
+  } catch {
+    /* chrome:// or no tab */
+  }
+}
+
+restoreForActiveTab().then(render);
