@@ -2,12 +2,19 @@ import { extractFromMarkdown, hashUrl } from "../lib/engine.js";
 import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
+const MAX_HEAL_TABS = 2;
+const HEAL_TIMEOUT_MS = 8000;
 
 const DEFAULT_SETTINGS = {
   maskPii: false,
   maxPages: 4,
   forceHeuristic: false,
 };
+
+/** Concurrent hidden heal tabs — never more than MAX_HEAL_TABS. */
+let healInFlight = 0;
+const healWaiters = [];
+const openHealTabs = new Set();
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
@@ -66,6 +73,38 @@ function sendToPanel(payload) {
   chrome.runtime.sendMessage(payload).catch(() => {});
 }
 
+function logHeal(status, message, detail) {
+  sendToPanel({
+    type: "AETHER_PROGRESS",
+    event: { stage: "navigate", status, message, detail },
+  });
+}
+
+async function acquireHealSlot() {
+  if (healInFlight < MAX_HEAL_TABS) {
+    healInFlight += 1;
+    return;
+  }
+  await new Promise((resolve) => healWaiters.push(resolve));
+  healInFlight += 1;
+}
+
+function releaseHealSlot() {
+  healInFlight = Math.max(0, healInFlight - 1);
+  const next = healWaiters.shift();
+  if (next) next();
+}
+
+async function closeHealTab(tabId) {
+  if (!tabId) return;
+  openHealTabs.delete(tabId);
+  try {
+    await chrome.tabs.remove(tabId);
+  } catch {
+    // Already closed or never opened.
+  }
+}
+
 async function serializeTab(tabId) {
   try {
     return await chrome.tabs.sendMessage(tabId, { type: "AETHER_SERIALIZE" });
@@ -79,21 +118,35 @@ async function serializeTab(tabId) {
 }
 
 async function fetchPageInBackground(url) {
-  const tab = await chrome.tabs.create({ url, active: false });
+  await acquireHealSlot();
+  let tabId = null;
   try {
-    await waitComplete(tab.id, 8000);
-    const res = await serializeTab(tab.id);
+    const tab = await chrome.tabs.create({ url, active: false });
+    tabId = tab.id;
+    if (tabId) openHealTabs.add(tabId);
+    await waitComplete(tabId, HEAL_TIMEOUT_MS);
+    const res = await serializeTab(tabId);
     return res?.ok ? res.doc : null;
-  } catch {
+  } catch (err) {
+    const timedOut = err?.message === "timeout";
+    logHeal(
+      "warn",
+      timedOut ? `Heal tab timed out (${HEAL_TIMEOUT_MS / 1000}s)` : "Heal tab failed",
+      url,
+    );
     return null;
   } finally {
-    if (tab.id) await chrome.tabs.remove(tab.id).catch(() => {});
+    await closeHealTab(tabId);
+    releaseHealSlot();
   }
 }
 
 function waitComplete(tabId, ms) {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    const t = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new Error("timeout"));
+    }, ms);
     function listener(id, info) {
       if (id === tabId && info.status === "complete") {
         clearTimeout(t);
@@ -147,6 +200,9 @@ async function extractActive(force) {
     maxPages: settings.maxPages,
     onEvent: (event) => sendToPanel({ type: "AETHER_PROGRESS", event }),
   });
+  for (const leftover of [...openHealTabs]) {
+    await closeHealTab(leftover);
+  }
   if (!result.record.cacheHit) await writeCache(res.doc.url, result.record);
   return result;
 }
