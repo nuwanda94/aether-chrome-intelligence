@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Aether — Company Intelligence",
   "short_name": "Aether",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Autonomous on-device company intelligence. Gemini Nano extraction, self-healing navigation, and source-traced records.",
   "minimum_chrome_version": "123",
   "permissions": [
@@ -20,6 +20,10 @@
   },
   "side_panel": {
     "default_path": "sidepanel/index.html"
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": false
   },
   "action": {
     "default_title": "Open Aether",

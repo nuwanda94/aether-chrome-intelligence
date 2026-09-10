@@ -3,6 +3,12 @@ import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
 
+const DEFAULT_SETTINGS = {
+  maskPii: false,
+  maxPages: 4,
+  forceHeuristic: false,
+};
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 });
@@ -10,6 +16,16 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) await chrome.sidePanel.open({ tabId: tab.id });
 });
+
+async function readSettings() {
+  const bag = await chrome.storage.sync.get(DEFAULT_SETTINGS);
+  const maxPages = Math.min(6, Math.max(2, Math.round(Number(bag.maxPages) || 4)));
+  return {
+    maskPii: Boolean(bag.maskPii),
+    maxPages,
+    forceHeuristic: Boolean(bag.forceHeuristic),
+  };
+}
 
 async function ensureOffscreen() {
   const contexts = await chrome.runtime.getContexts({
@@ -90,23 +106,25 @@ function waitComplete(tabId, ms) {
 }
 
 /** Prompt API / LanguageModel stays in the offscreen document — never the SW. */
-async function inferViaOffscreen(doc) {
-  const ready = await ensureOffscreen();
-  if (ready) {
-    try {
-      const res = await chrome.runtime.sendMessage({
-        type: "AETHER_OFFSCREEN_INFER",
-        doc,
-      });
-      if (res?.ok && res.record) {
-        return {
-          record: res.record,
-          engine: res.engine || "offscreen",
-          chunks: res.chunks,
-        };
+async function inferViaOffscreen(doc, forceHeuristic) {
+  if (!forceHeuristic) {
+    const ready = await ensureOffscreen();
+    if (ready) {
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: "AETHER_OFFSCREEN_INFER",
+          doc,
+        });
+        if (res?.ok && res.record) {
+          return {
+            record: res.record,
+            engine: res.engine || "offscreen",
+            chunks: res.chunks,
+          };
+        }
+      } catch {
+        // Offscreen missing or message dropped — heuristic below.
       }
-    } catch {
-      // Offscreen missing or message dropped — heuristic below.
     }
   }
   return { record: extractFromMarkdown(doc), engine: "heuristic" };
@@ -115,16 +133,18 @@ async function inferViaOffscreen(doc) {
 async function extractActive(force) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url) throw new Error("No active tab");
+  const settings = await readSettings();
   sendToPanel({ type: "AETHER_PROGRESS", event: { stage: "sanitize", message: "Reading DOM", status: "running" } });
   const res = await serializeTab(tab.id);
   if (!res?.ok) throw new Error("Could not serialize this page");
-  await ensureOffscreen();
+  if (!settings.forceHeuristic) await ensureOffscreen();
   const cached = force ? null : await readCache(res.doc.url);
   const result = await runHarness({
     startDoc: res.doc,
     cached,
     fetchPage: fetchPageInBackground,
-    infer: inferViaOffscreen,
+    infer: (doc) => inferViaOffscreen(doc, settings.forceHeuristic),
+    maxPages: settings.maxPages,
     onEvent: (event) => sendToPanel({ type: "AETHER_PROGRESS", event }),
   });
   if (!result.record.cacheHit) await writeCache(res.doc.url, result.record);

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aether options</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #1a1a1a;
+        --muted: #5c5c5c;
+        --line: #d8d8d8;
+        --accent: #1f4d3a;
+      }
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        color: var(--ink);
+        max-width: 36rem;
+        margin: 2rem auto;
+        padding: 0 1.25rem;
+      }
+      h1 {
+        font-family: Georgia, serif;
+        font-weight: 500;
+        font-size: 1.6rem;
+        margin: 0 0 0.25rem;
+      }
+      p.lead {
+        color: var(--muted);
+        margin: 0 0 1.5rem;
+      }
+      label.row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 0.75rem 0;
+      }
+      label.stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin: 0.75rem 0;
+      }
+      input[type="number"] {
+        width: 4.5rem;
+        padding: 0.25rem 0.4rem;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.4rem 0.8rem;
+        border: 1px solid var(--line);
+        background: transparent;
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      #status {
+        min-height: 1.4em;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Aether</h1>
+    <p class="lead">Local-only settings. Stored in chrome.storage.sync.</p>
+
+    <label class="row">
+      <input type="checkbox" id="mask-pii" />
+      Default PII mask on in the side panel
+    </label>
+
+    <label class="stack">
+      Max self-heal pages (2–6)
+      <input type="number" id="max-pages" min="2" max="6" step="1" value="4" />
+    </label>
+
+    <label class="row">
+      <input type="checkbox" id="force-heuristic" />
+      Force heuristic (skip Gemini Nano / Prompt API)
+    </label>
+
+    <button type="button" class="primary" id="save-btn">Save</button>
+    <button type="button" id="clear-cache-btn">Clear domain cache</button>
+    <p id="status"></p>
+    <script src="options.js"></script>
+  </body>
+</html>
