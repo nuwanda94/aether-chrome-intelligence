@@ -11,6 +11,9 @@ const STRIP_TAGS = new Set([
   "META",
 ]);
 
+/** Keep enough text for map-reduce chunking (~20k words). Inference still splits at 8k tokens. */
+const SERIALIZE_CHAR_CAP = 200_000;
+
 function sanitizeClone(root) {
   const clone = root.cloneNode(true);
   const walker = document.createTreeWalker(clone, NodeFilter.SHOW_ELEMENT);
@@ -61,7 +64,7 @@ function toMarkdown(node) {
     for (const child of el.children) walk(child);
   };
   walk(node);
-  return blocks.join("\n\n").slice(0, 24_000);
+  return blocks.join("\n\n").slice(0, SERIALIZE_CHAR_CAP);
 }
 
 function collectLinks() {

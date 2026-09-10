@@ -7,7 +7,11 @@ import {
   maskValue,
   isComplete,
   emptyRecord,
+  chunkMarkdown,
+  estimateTokens,
+  TOKEN_LIMIT,
 } from "../lib/engine.js";
+import { inferDocument } from "../lib/nano.js";
 
 const EN_DOC = {
   url: "https://acme.example/",
@@ -158,4 +162,43 @@ test("maskValue is DLP-safe for email and phone", () => {
   assert.equal(maskValue("phone", "+1 415-555-0199"), "+• •••-•••-••••");
   assert.equal(maskValue("company_name", "Acme Corp"), "Acme Corp");
   assert.equal(maskValue("email", ""), "");
+});
+
+test("chunkMarkdown keeps a single-pass path for small pages", () => {
+  const chunks = chunkMarkdown(EN_DOC.markdown);
+  assert.equal(chunks.length, 1);
+  assert.ok(estimateTokens(EN_DOC.markdown) <= TOKEN_LIMIT);
+});
+
+test("20k-word fixture is chunked and map-reduce merges name + executives", async () => {
+  const filler = "lorem ipsum dolor sit amet consectetur adipiscing elit. ";
+  const wordsNeeded = 20_000;
+  const repeats = Math.ceil(wordsNeeded / filler.trim().split(/\s+/).length);
+  const body = filler.repeat(repeats);
+  const markdown = [
+    `# Acme Corp`,
+    ``,
+    `## Overview`,
+    body.slice(0, body.length / 2),
+    ``,
+    `## History`,
+    body.slice(body.length / 2),
+    ``,
+    `## Leadership`,
+    `- **Jane Doe** — Chief Executive Officer — jane.doe@acme.example`,
+  ].join("\n");
+  assert.ok(markdown.split(/\s+/).length >= 20_000);
+  const chunks = chunkMarkdown(markdown);
+  assert.ok(chunks.length > 1, `expected multiple chunks, got ${chunks.length}`);
+  assert.ok(chunks.every((c) => estimateTokens(c) <= TOKEN_LIMIT + 8));
+
+  const { record, chunks: n } = await inferDocument({
+    url: "https://acme.example/long",
+    title: "Acme Corp",
+    lang: "en",
+    markdown,
+  });
+  assert.ok(n > 1);
+  assert.equal(record.fields.company_name.value, "Acme Corp");
+  assert.equal(record.executives.some((e) => e.name === "Jane Doe"), true);
 });
