@@ -1,0 +1,10 @@
+{
+  "name": "aether-chrome-intelligence",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aether company-intelligence Chrome MV3 extension",
+  "scripts": {
+    "test": "node --test tests/engine.test.mjs"
+  }
+}
