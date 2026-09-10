@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runHarness, MAX_PAGES, SCORE_THRESHOLD } from "../lib/harness.js";
+import { extractFromMarkdown } from "../lib/engine.js";
 
 const SPARSE = `# Loop Corp
 
@@ -106,4 +107,20 @@ test("looping link graph cannot exceed MAX_PAGES", async () => {
   assert.ok(pagesTouched <= MAX_PAGES, `touched ${pagesTouched} > MAX_PAGES ${MAX_PAGES}`);
   assert.ok(fetched.length <= MAX_PAGES - 1);
   assert.equal(MAX_PAGES, 4);
+});
+
+test("custom infer is used for primary and second-pass pages", async () => {
+  const inferred = [];
+  const start = "https://loop.example/";
+  await runHarness({
+    startDoc: sparseDoc(start),
+    fetchPage: async (href) => sparseDoc(href),
+    infer: async (doc) => {
+      inferred.push(doc.url);
+      return { record: extractFromMarkdown(doc), engine: "offscreen" };
+    },
+  });
+  assert.ok(inferred.includes(start), "primary pass uses infer");
+  assert.ok(inferred.length >= 2, "heal pages also use infer");
+  assert.equal(inferred[0], start);
 });

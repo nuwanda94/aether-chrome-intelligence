@@ -1,4 +1,4 @@
-import { hashUrl } from "../lib/engine.js";
+import { extractFromMarkdown, hashUrl } from "../lib/engine.js";
 import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
@@ -15,12 +15,17 @@ async function ensureOffscreen() {
   const contexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
   });
-  if (contexts.length) return;
-  await chrome.offscreen.createDocument({
-    url: OFFSCREEN_URL,
-    reasons: ["DOM_PARSER"],
-    justification: "Serialize and infer company records off the visible tab",
-  });
+  if (contexts.length) return true;
+  try {
+    await chrome.offscreen.createDocument({
+      url: OFFSCREEN_URL,
+      reasons: ["DOM_PARSER"],
+      justification: "Serialize and infer company records off the visible tab",
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function cacheKey(url) {
@@ -84,6 +89,29 @@ function waitComplete(tabId, ms) {
   });
 }
 
+/** Prompt API / LanguageModel stays in the offscreen document — never the SW. */
+async function inferViaOffscreen(doc) {
+  const ready = await ensureOffscreen();
+  if (ready) {
+    try {
+      const res = await chrome.runtime.sendMessage({
+        type: "AETHER_OFFSCREEN_INFER",
+        doc,
+      });
+      if (res?.ok && res.record) {
+        return {
+          record: res.record,
+          engine: res.engine || "offscreen",
+          chunks: res.chunks,
+        };
+      }
+    } catch {
+      // Offscreen missing or message dropped — heuristic below.
+    }
+  }
+  return { record: extractFromMarkdown(doc), engine: "heuristic" };
+}
+
 async function extractActive(force) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url) throw new Error("No active tab");
@@ -96,6 +124,7 @@ async function extractActive(force) {
     startDoc: res.doc,
     cached,
     fetchPage: fetchPageInBackground,
+    infer: inferViaOffscreen,
     onEvent: (event) => sendToPanel({ type: "AETHER_PROGRESS", event }),
   });
   if (!result.record.cacheHit) await writeCache(res.doc.url, result.record);
@@ -103,6 +132,9 @@ async function extractActive(force) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "AETHER_OFFSCREEN_INFER") {
+    return false;
+  }
   if (msg?.type === "AETHER_EXTRACT") {
     extractActive(Boolean(msg.force))
       .then((result) => sendResponse({ ok: true, ...result }))
