@@ -11,8 +11,12 @@
       <div>
         <p class="wordmark">Aether</p>
         <p class="meta" id="engine-label">On-device · local-first</p>
+        <p class="meta timing" id="timing-label" hidden></p>
       </div>
-      <button type="button" class="btn primary" id="extract-btn" data-i18n="extract">Extract</button>
+      <div class="head-actions">
+        <button type="button" class="btn primary" id="extract-btn" data-i18n="extract">Extract</button>
+        <button type="button" class="btn ghost" id="force-btn" title="Ignore cache and re-run">Force</button>
+      </div>
     </header>
     <div class="toolbar">
       <button type="button" class="icon" id="undo-btn" title="Undo">↩</button>
@@ -21,6 +25,8 @@
         <input type="checkbox" id="pii-toggle" />
         <span data-i18n="maskPii">Mask PII</span>
       </label>
+      <button type="button" class="btn ghost" id="clear-cache-btn" title="Clear all domain caches">Clear cache</button>
+      <button type="button" class="btn ghost" id="options-btn" title="Open settings">Options</button>
       <button type="button" class="btn ghost" id="json-btn">JSON</button>
       <button type="button" class="btn ghost" id="md-btn">MD</button>
       <button type="button" class="btn ghost" id="csv-btn">CSV</button>

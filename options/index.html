@@ -29,11 +29,25 @@
         color: var(--muted);
         margin: 0 0 1.5rem;
       }
+      h2 {
+        font-size: 0.95rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 1.5rem 0 0.5rem;
+        font-weight: 600;
+      }
       label.row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 0.6rem;
         margin: 0.75rem 0;
+      }
+      label.row span.help {
+        display: block;
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 0.15rem;
       }
       label.stack {
         display: flex;
@@ -47,6 +61,7 @@
       }
       button {
         margin-top: 1rem;
+        margin-right: 0.5rem;
         padding: 0.4rem 0.8rem;
         border: 1px solid var(--line);
         background: transparent;
@@ -62,22 +77,43 @@
         color: var(--muted);
         font-size: 0.9rem;
       }
+      .note {
+        background: color-mix(in oklab, var(--accent) 8%, transparent);
+        border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
     </style>
   </head>
   <body>
     <h1>Aether</h1>
-    <p class="lead">Local-only settings. Stored in chrome.storage.sync.</p>
+    <p class="lead">Local-only settings. Nothing leaves your browser.</p>
 
+    <p class="note">
+      Side panel also has <strong>Clear cache</strong>, <strong>Force</strong> (ignore cache),
+      extract timing, and <strong>Verify source</strong> (opens the page and highlights the field).
+    </p>
+
+    <h2>Privacy</h2>
     <label class="row">
       <input type="checkbox" id="mask-pii" />
-      Default PII mask on in the side panel
+      <div>
+        Default PII mask on in the side panel
+        <span class="help">Emails and phones show as masked in the dossier UI.</span>
+      </div>
     </label>
 
     <label class="row">
       <input type="checkbox" id="mask-cache" />
-      Mask emails and phones in the domain cache (off by default so re-extract can still heal)
+      <div>
+        Mask emails and phones in the domain cache
+        <span class="help">Off by default so re-extract can still heal from real values.</span>
+      </div>
     </label>
 
+    <h2>Extraction</h2>
     <label class="stack">
       Max self-heal pages (2–6)
       <input type="number" id="max-pages" min="2" max="6" step="1" value="4" />
@@ -85,9 +121,16 @@
 
     <label class="row">
       <input type="checkbox" id="force-heuristic" />
-      Force heuristic (skip Gemini Nano / Prompt API)
+      <div>
+        Force heuristic (skip Gemini Nano / Prompt API)
+        <span class="help">Use only when debugging. Leave off to prefer on-device Nano.</span>
+      </div>
     </label>
 
+    <h2>Storage</h2>
+    <p class="lead" style="margin-bottom: 0.5rem">
+      Clears every domain schema in chrome.storage.local. Panel history is separate.
+    </p>
     <button type="button" class="primary" id="save-btn">Save</button>
     <button type="button" id="clear-cache-btn">Clear domain cache</button>
     <p id="status"></p>
