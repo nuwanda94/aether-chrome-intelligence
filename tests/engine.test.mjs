@@ -11,8 +11,9 @@ import {
   estimateTokens,
   TOKEN_LIMIT,
   matchSourceId,
+  validateCompanyPayload,
 } from "../lib/engine.js";
-import { inferDocument } from "../lib/nano.js";
+import { inferDocument, applyJson } from "../lib/nano.js";
 
 const EN_DOC = {
   url: "https://acme.example/",
@@ -134,7 +135,7 @@ test("mergeRecords reports dirty-field conflicts and keeps the user value", () =
   const patch = extractFromMarkdown({
     ...EN_DOC,
     url: "https://acme.example/contact",
-    markdown: `# Acme Corp\n\nother@acme.example\n`,
+    markdown: `# Acme Corp\\n\\nother@acme.example\\n`,
   });
   patch.fields.email.value = "other@acme.example";
   patch.fields.email.confidence = "high";
@@ -149,7 +150,7 @@ test("mergeRecords fills empty fields and appends new executives", () => {
     url: "https://acme.example/",
     title: "Acme",
     lang: "en",
-    markdown: `# Acme\n\nJust a homepage.\n`,
+    markdown: `# Acme\\n\\nJust a homepage.\\n`,
   });
   const patch = extractFromMarkdown(EN_DOC);
   const { merged, conflicts } = mergeRecords(base, patch);
@@ -221,4 +222,58 @@ test("sourceIds attach from doc.sources onto company/email/phone/exec fields", (
   assert.equal(rec.executives[0].sourceId, "aeth-person-4");
   assert.equal(matchSourceId(doc.sources, "Acme Corp", ["heading"]), "aeth-heading-1");
   assert.equal(matchSourceId(doc.sources, "nope", ["heading"]), "");
+});
+
+test("validateCompanyPayload accepts known string fields and named executives", () => {
+  const checked = validateCompanyPayload({
+    company_name: "Acme Corp",
+    email: "press@acme.example",
+    mystery: 99,
+    executives: [
+      { name: "Jane Doe", role: "CEO", email: "jane.doe@acme.example" },
+      { role: "Ghost" },
+      { name: "" },
+    ],
+  });
+  assert.equal(checked.ok, true);
+  assert.equal(checked.payload.company_name, "Acme Corp");
+  assert.equal("mystery" in checked.payload, false);
+  assert.equal(checked.payload.executives.length, 1);
+  assert.equal(checked.payload.executives[0].name, "Jane Doe");
+});
+
+test("validateCompanyPayload rejects wrong field types", () => {
+  assert.equal(validateCompanyPayload(null).ok, false);
+  assert.equal(validateCompanyPayload({ company_name: 12 }).ok, false);
+  assert.equal(validateCompanyPayload({ executives: { name: "Pat" } }).ok, false);
+  assert.equal(validateCompanyPayload({ executives: [{ name: "Pat", email: ["x"] }] }).ok, false);
+});
+
+test("applyJson uses validated payload and infer falls back on invalid Nano JSON", async () => {
+  const valid = validateCompanyPayload({
+    company_name: "Nano Co",
+    executives: [{ name: "Ada Lovelace", role: "CTO" }],
+  });
+  assert.equal(valid.ok, true);
+  const rec = applyJson(EN_DOC, valid.payload);
+  assert.equal(rec.fields.company_name.value, "Nano Co");
+  assert.equal(rec.executives.some((e) => e.name === "Ada Lovelace"), true);
+
+  const prev = globalThis.LanguageModel;
+  globalThis.LanguageModel = {
+    availability: async () => "available",
+    create: async () => ({
+      prompt: async () => JSON.stringify({ company_name: 404, executives: "nope" }),
+      destroy() {},
+    }),
+  };
+  try {
+    const { record, engine } = await inferDocument(EN_DOC);
+    assert.equal(engine, "heuristic");
+    assert.equal(record.fields.company_name.value, "Acme Corp");
+    assert.equal(record.executives[0].name, "Jane Doe");
+  } finally {
+    if (prev === undefined) delete globalThis.LanguageModel;
+    else globalThis.LanguageModel = prev;
+  }
 });
