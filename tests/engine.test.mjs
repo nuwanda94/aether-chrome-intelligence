@@ -10,6 +10,7 @@ import {
   chunkMarkdown,
   estimateTokens,
   TOKEN_LIMIT,
+  matchSourceId,
 } from "../lib/engine.js";
 import { inferDocument } from "../lib/nano.js";
 
@@ -201,4 +202,23 @@ test("20k-word fixture is chunked and map-reduce merges name + executives", asyn
   assert.ok(n > 1);
   assert.equal(record.fields.company_name.value, "Acme Corp");
   assert.equal(record.executives.some((e) => e.name === "Jane Doe"), true);
+});
+
+test("sourceIds attach from doc.sources onto company/email/phone/exec fields", () => {
+  const doc = {
+    ...EN_DOC,
+    sources: [
+      { id: "aeth-heading-1", kind: "heading", text: "Acme Corp" },
+      { id: "aeth-email-2", kind: "email", text: "press@acme.example" },
+      { id: "aeth-phone-3", kind: "phone", text: "+1 415-555-0199" },
+      { id: "aeth-person-4", kind: "person", text: "Jane Doe Chief Executive Officer jane.doe@acme.example" },
+    ],
+  };
+  const rec = extractFromMarkdown(doc);
+  assert.equal(rec.fields.company_name.sourceId, "aeth-heading-1");
+  assert.equal(rec.fields.email.sourceId, "aeth-email-2");
+  assert.equal(rec.fields.phone.sourceId, "aeth-phone-3");
+  assert.equal(rec.executives[0].sourceId, "aeth-person-4");
+  assert.equal(matchSourceId(doc.sources, "Acme Corp", ["heading"]), "aeth-heading-1");
+  assert.equal(matchSourceId(doc.sources, "nope", ["heading"]), "");
 });
