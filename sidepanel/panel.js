@@ -16,6 +16,27 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const body = $("panel-body");
 
+const FIELD_KIND = {
+  company_name: "heading",
+  legal_name: "heading",
+  email: "email",
+  phone: "phone",
+  address: "heading",
+};
+
+function fieldKind(key) {
+  return FIELD_KIND[key] || "";
+}
+
+function verifySource({ sourceId, snippet, kind }) {
+  chrome.runtime.sendMessage({
+    type: "AETHER_HIGHLIGHT",
+    sourceId: sourceId || "",
+    snippet: snippet || "",
+    kind: kind || "",
+  });
+}
+
 async function persistHistory() {
   const origin = state.origin || originFromRecord(state.record);
   if (!origin) return;
@@ -74,12 +95,14 @@ function render() {
       key === "description"
         ? `<textarea data-field="${key}">${esc(val)}</textarea>`
         : `<input data-field="${key}" value="${esc(val)}" />`;
-    return `<div class="field"><div class="lab"><span class="k">${String(i + 1).padStart(2, "0")} ${FIELD_LABELS[key]}</span><span class="badge ${f.confidence}">${f.verified ? "✓ " : ""}${f.confidence}</span></div>${control}<button type="button" class="btn ghost" data-src="${esc(f.sourceUrl)}" data-snippet="${esc(f.sourceSnippet || f.value)}">Verify source</button></div>`;
+    const sourceId = f.sourceId || "";
+    const snippet = f.sourceSnippet || f.value || "";
+    return `<div class="field"><div class="lab"><span class="k">${String(i + 1).padStart(2, "0")} ${FIELD_LABELS[key]}</span><span class="badge ${f.confidence}">${f.verified ? "✓ " : ""}${f.confidence}</span></div>${control}<button type="button" class="btn ghost" data-src="${esc(f.sourceUrl)}" data-source-id="${esc(sourceId)}" data-kind="${esc(fieldKind(key))}" data-snippet="${esc(snippet)}">Verify source</button></div>`;
   }).join("");
   const execs = rec.executives
     .map(
       (e) =>
-        `<div class="card"><div class="lab"><span class="badge ${e.confidence}">${e.confidence}</span></div><input data-exec="${e.id}" data-k="name" value="${esc(e.name)}" placeholder="Name" /><input data-exec="${e.id}" data-k="role" value="${esc(e.role)}" placeholder="Role" style="margin-top:6px" /><input data-exec="${e.id}" data-k="email" value="${esc(state.maskPii && e.email ? maskValue("email", e.email) : e.email)}" placeholder="Email" style="margin-top:6px" /></div>`,
+        `<div class="card"><div class="lab"><span class="badge ${e.confidence}">${e.confidence}</span></div><input data-exec="${e.id}" data-k="name" value="${esc(e.name)}" placeholder="Name" /><input data-exec="${e.id}" data-k="role" value="${esc(e.role)}" placeholder="Role" style="margin-top:6px" /><input data-exec="${e.id}" data-k="email" value="${esc(state.maskPii && e.email ? maskValue("email", e.email) : e.email)}" placeholder="Email" style="margin-top:6px" /><button type="button" class="btn ghost" data-src="${esc(e.sourceUrl || "")}" data-source-id="${esc(e.sourceId || "")}" data-kind="person" data-snippet="${esc([e.name, e.role].filter(Boolean).join(" "))}">Verify source</button></div>`,
     )
     .join("");
   body.innerHTML = `
@@ -115,11 +138,12 @@ function render() {
       }
     });
   });
-  body.querySelectorAll("[data-src]").forEach((el) => {
+  body.querySelectorAll("[data-snippet]").forEach((el) => {
     el.addEventListener("click", () => {
-      chrome.runtime.sendMessage({
-        type: "AETHER_HIGHLIGHT",
+      verifySource({
+        sourceId: el.getAttribute("data-source-id"),
         snippet: el.getAttribute("data-snippet"),
+        kind: el.getAttribute("data-kind"),
       });
     });
   });
