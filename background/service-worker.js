@@ -174,11 +174,24 @@ function waitComplete(tabId, ms) {
 }
 
 /** Prompt API / LanguageModel stays in the offscreen document — never the SW. */
+async function ensureNanoOffscreen() {
+  const ready = await ensureOffscreen();
+  if (!ready) return { ok: false, status: "no-offscreen" };
+  try {
+    const res = await chrome.runtime.sendMessage({ type: "AETHER_OFFSCREEN_ENSURE_NANO" });
+    return res || { ok: false, status: "no-response" };
+  } catch {
+    return { ok: false, status: "ensure-failed" };
+  }
+}
+
 async function inferViaOffscreen(doc, forceHeuristic) {
   if (!forceHeuristic) {
     const ready = await ensureOffscreen();
     if (ready) {
       try {
+        // Kick off / wait for model download before inference when needed.
+        await ensureNanoOffscreen();
         const res = await chrome.runtime.sendMessage({
           type: "AETHER_OFFSCREEN_INFER",
           doc,
@@ -223,7 +236,7 @@ async function extractActive(force) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type === "AETHER_OFFSCREEN_INFER") {
+  if (msg?.type === "AETHER_OFFSCREEN_INFER" || msg?.type === "AETHER_OFFSCREEN_ENSURE_NANO" || msg?.type === "AETHER_OFFSCREEN_PROBE_NANO") {
     return false;
   }
   if (msg?.type === "AETHER_EXTRACT") {
