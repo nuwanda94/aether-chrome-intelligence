@@ -1,5 +1,6 @@
 import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson, executivesToCsv } from "../lib/engine.js";
 import { loadHistory, saveHistory, originFromRecord } from "../lib/history.js";
+import { ensureNano, probeNano } from "../lib/nano.js";
 
 const FALLBACK = {
   extract: "Extract",
@@ -29,6 +30,8 @@ const FALLBACK = {
   extractFailed: "Extract failed",
   engineNano: "Gemini Nano",
   engineHeuristic: "Heuristic · Nano unavailable",
+  engineDownloading: "Downloading Gemini Nano…",
+  engineCache: "Cache",
   placeholderName: "Name",
   placeholderRole: "Role",
   placeholderEmail: "Email",
@@ -217,9 +220,19 @@ function empty() {
 
 function esc(s) {
   return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/"/g, """);
+}
+
+function setEngineLabel(engine, nanoStatus) {
+  const el = $("engine-label");
+  if (!el) return;
+  if (engine === "nano") el.textContent = t("engineNano");
+  else if (engine === "cache") el.textContent = t("engineCache");
+  else if (nanoStatus === "downloading" || nanoStatus === "downloadable")
+    el.textContent = t("engineDownloading");
+  else el.textContent = t("engineHeuristic");
 }
 
 $("extract-btn").addEventListener("click", async () => {
@@ -229,6 +242,39 @@ $("extract-btn").addEventListener("click", async () => {
   state.error = "";
   state.tab = "log";
   render();
+  // User-gesture path: start / wait for Gemini Nano download in the panel context first.
+  let nanoStatus = "unknown";
+  try {
+    const probe = await probeNano();
+    nanoStatus = probe.status;
+    setEngineLabel(null, nanoStatus);
+    if (probe.status === "downloadable" || probe.status === "downloading") {
+      state.events.push({
+        stage: "nano",
+        message: "Downloading Gemini Nano (first run may take several minutes)",
+        status: "running",
+      });
+      render();
+      const ensured = await ensureNano((evt) => {
+        nanoStatus = evt.status;
+        setEngineLabel(null, evt.status);
+        if (typeof evt.loaded === "number") {
+          const pct = Math.round(evt.loaded * 100);
+          const last = state.events[state.events.length - 1];
+          if (last?.stage === "nano") {
+            last.message = `Downloading Gemini Nano · ${pct}%`;
+            last.detail = String(pct);
+          }
+          render();
+        }
+      });
+      nanoStatus = ensured.status;
+    } else if (probe.status === "available") {
+      setEngineLabel("nano", "available");
+    }
+  } catch {
+    /* panel may lack LanguageModel; offscreen will try next */
+  }
   const res = await chrome.runtime.sendMessage({ type: "AETHER_EXTRACT" });
   $("extract-btn").disabled = false;
   $("extract-btn").textContent = t("extract");
@@ -244,7 +290,7 @@ $("extract-btn").addEventListener("click", async () => {
   state.future = [];
   state.origin = originFromRecord(res.record);
   await persistHistory();
-  $("engine-label").textContent = res.engine === "nano" ? t("engineNano") : t("engineHeuristic");
+  setEngineLabel(res.engine, nanoStatus);
   state.tab = "record";
   render();
   if (state.conflicts.length) {
