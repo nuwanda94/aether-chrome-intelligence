@@ -2,10 +2,11 @@
 
 Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
-**v2.1 complete.** v2.2 hardening in progress. Next run: **R06 Slim cache payload + schema version**.
+**v2.1 complete.** v2.2 hardening in progress. Next run: **R07 Correct offscreen document reasons**.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 16:00 IST | R06 Slim cache payload + schema version | Domain cache stores schemaVersion 2 slim blobs (fields/execs/pages/language/snippets, no markdownByUrl); 7-day TTL and old versions are a miss; maskCache still redacts. |
 | 2026-09-11 15:00 IST | R05 On-demand content script injection | Removed persistent all-URL content_scripts; SW injects content-script.js for serialize and AETHER_HIGHLIGHT; STORE.md documents host/scripting rationale. |
 | 2026-09-11 14:02 IST | R04 Score links from heal pages | Harness unions scoreLinks from each fetched heal doc; About→/leadership fixture proves second-hop fetch within MAX_PAGES. |
 | 2026-09-11 13:04 IST | R03 Broader heuristic executive patterns | extractExecs parses Name — Role, Name, Title, and DE/JP role lines without bold; 17 engine tests pass. |
