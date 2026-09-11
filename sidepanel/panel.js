@@ -233,9 +233,9 @@ function empty() {
 
 function esc(s) {
   return String(s || "")
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/"/g, """);
+    .replace(/&/g, "\u0026amp;")
+    .replace(/</g, "\u003clt;")
+    .replace(/"/g, "\u0026quot;");
 }
 
 function setEngineLabel(engine, nanoStatus) {
