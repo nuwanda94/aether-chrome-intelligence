@@ -124,3 +124,49 @@ test("custom infer is used for primary and second-pass pages", async () => {
   assert.ok(inferred.length >= 2, "heal pages also use infer");
   assert.equal(inferred[0], start);
 });
+
+test("heal-page links are scored so About can discover /leadership", async () => {
+  const fetched = [];
+  const startDoc = {
+    url: "https://loop.example/",
+    title: "Loop",
+    lang: "en",
+    markdown: SPARSE,
+    links: [{ href: "https://loop.example/about", text: "About us" }],
+  };
+  const aboutDoc = {
+    url: "https://loop.example/about",
+    title: "About",
+    lang: "en",
+    markdown: SPARSE,
+    links: [{ href: "https://loop.example/leadership", text: "Leadership team" }],
+  };
+  const leadMd = `# Leadership
+
+- **Ada Lovelace** — Chief Executive Officer — ada@loop.example
+`;
+  const leadDoc = {
+    url: "https://loop.example/leadership",
+    title: "Leadership",
+    lang: "en",
+    markdown: leadMd,
+    links: [],
+  };
+
+  await runHarness({
+    startDoc,
+    fetchPage: async (href) => {
+      fetched.push(href);
+      if (href.includes("/about")) return aboutDoc;
+      if (href.includes("/leadership")) return leadDoc;
+      return { url: href, title: "", lang: "en", markdown: SPARSE, links: [] };
+    },
+  });
+
+  assert.ok(fetched.includes("https://loop.example/about"), "fetches About from homepage");
+  assert.ok(
+    fetched.includes("https://loop.example/leadership"),
+    "discovers /leadership from About page links",
+  );
+  assert.ok(fetched.length <= MAX_PAGES - 1);
+});
