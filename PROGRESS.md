@@ -2,10 +2,11 @@
 
 Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
-**v2.1 complete.** v2.2 hardening in progress. Next run: **R07 Correct offscreen document reasons**.
+**v2.1 complete.** v2.2 hardening in progress. Next run: **R08 Gold-set fixtures + quality metrics**.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 17:01 IST | R07 Correct offscreen document reasons | createDocument uses WORKERS (BLOBS/DOM_PARSER fallback) and a Prompt API isolation justification instead of unused DOM_PARSER. |
 | 2026-09-11 16:00 IST | R06 Slim cache payload + schema version | Domain cache stores schemaVersion 2 slim blobs (fields/execs/pages/language/snippets, no markdownByUrl); 7-day TTL and old versions are a miss; maskCache still redacts. |
 | 2026-09-11 15:00 IST | R05 On-demand content script injection | Removed persistent all-URL content_scripts; SW injects content-script.js for serialize and AETHER_HIGHLIGHT; STORE.md documents host/scripting rationale. |
 | 2026-09-11 14:02 IST | R04 Score links from heal pages | Harness unions scoreLinks from each fetched heal doc; About→/leadership fixture proves second-hop fetch within MAX_PAGES. |

@@ -38,17 +38,34 @@ async function readSettings() {
   };
 }
 
+/**
+ * Offscreen exists so LanguageModel / Prompt API never run in the SW.
+ * There is no dedicated Prompt-API reason; pick the closest allowed enum.
+ * WORKERS (Chrome 113+) is accurate for isolated inference work.
+ * BLOBS then DOM_PARSER are last-resort fallbacks so create still succeeds.
+ */
+function offscreenCreateParams() {
+  const Reason = chrome.offscreen?.Reason || {};
+  const reasons = Reason.WORKERS
+    ? [Reason.WORKERS]
+    : Reason.BLOBS
+      ? [Reason.BLOBS]
+      : ["DOM_PARSER"];
+  return {
+    url: OFFSCREEN_URL,
+    reasons,
+    justification:
+      "Isolate Gemini Nano Prompt API (LanguageModel) inference from the service worker",
+  };
+}
+
 async function ensureOffscreen() {
   const contexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
   });
   if (contexts.length) return true;
   try {
-    await chrome.offscreen.createDocument({
-      url: OFFSCREEN_URL,
-      reasons: ["DOM_PARSER"],
-      justification: "Serialize and infer company records off the visible tab",
-    });
+    await chrome.offscreen.createDocument(offscreenCreateParams());
     return true;
   } catch {
     return false;
