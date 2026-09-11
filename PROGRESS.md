@@ -4,6 +4,7 @@ Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 07:00 IST | P09 CSV export and clipboard | Executives CSV (`name,role,email`, PII-aware); Copy writes masked JSON when Mask PII is on, with a short toast. |
 | 2026-09-11 06:01 IST | P08 Stable source IDs in the DOM | Serialize stamps `data-aether-id` on heading/email/phone/person nodes; Verify source highlights by id (snippet+kind fallback), not XPath. |
 | 2026-09-11 05:00 IST | P07 Background tab cap + cleanup | Heal tabs gated to 2 concurrent slots; `finally` always removes the tab; 8s timeouts/failures logged to the side panel. |
 | 2026-09-11 04:00 IST | P06 Persist undo history | Session-backed undo/redo (20 snapshots per origin, local fallback); panel restores stacks after reload. |
