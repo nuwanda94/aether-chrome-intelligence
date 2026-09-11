@@ -4,6 +4,7 @@ Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 09:04 IST | P11 Mask PII before cache write | Optional `maskCache` (default off) redacts emails/phones via `maskRecordForCache` before `chrome.storage.local` schema writes; documented in README. |
 | 2026-09-11 08:00 IST | P10 Side panel UI locale | chrome.i18n `_locales/{en,de,ja}` + `default_locale`; Extract/Record/Mask PII/C-suite and other chrome strings localize; extracted JP names unchanged. |
 | 2026-09-11 07:00 IST | P09 CSV export and clipboard | Executives CSV (`name,role,email`, PII-aware); Copy writes masked JSON when Mask PII is on, with a short toast. |
 | 2026-09-11 06:01 IST | P08 Stable source IDs in the DOM | Serialize stamps `data-aether-id` on heading/email/phone/person nodes; Verify source highlights by id (snippet+kind fallback), not XPath. |

@@ -55,6 +55,7 @@ Remaining work is tracked in [`PLAN.md`](./PLAN.md) / [`plan.json`](./plan.json)
 ## Privacy
 
 - PII mask toggle redacts emails and phones in the UI and in exports.
+- **Mask cache** (`maskCache` in `chrome.storage.sync`, default **off**): when enabled, emails and phones are redacted with `maskRecordForCache` before the domain schema is written to `chrome.storage.local`. Leave it off if you want later re-extracts to heal from cached contact fields. Clear the domain cache after turning it on so older unmasked blobs are gone.
 - CSP on extension pages: `script-src 'self'; object-src 'self'`.
 - Untrusted page JS never executes inside the extension context.
 

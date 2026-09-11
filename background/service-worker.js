@@ -1,4 +1,4 @@
-import { extractFromMarkdown, hashUrl } from "../lib/engine.js";
+import { extractFromMarkdown, hashUrl, maskRecordForCache } from "../lib/engine.js";
 import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
@@ -7,6 +7,7 @@ const HEAL_TIMEOUT_MS = 8000;
 
 const DEFAULT_SETTINGS = {
   maskPii: false,
+  maskCache: false,
   maxPages: 4,
   forceHeuristic: false,
 };
@@ -29,6 +30,7 @@ async function readSettings() {
   const maxPages = Math.min(6, Math.max(2, Math.round(Number(bag.maxPages) || 4)));
   return {
     maskPii: Boolean(bag.maskPii),
+    maskCache: Boolean(bag.maskCache),
     maxPages,
     forceHeuristic: Boolean(bag.forceHeuristic),
   };
@@ -65,8 +67,9 @@ async function readCache(url) {
   return bag[key] || null;
 }
 
-async function writeCache(url, record) {
-  await chrome.storage.local.set({ [cacheKey(url)]: record });
+async function writeCache(url, record, maskCache) {
+  const payload = maskCache ? maskRecordForCache(record) : record;
+  await chrome.storage.local.set({ [cacheKey(url)]: payload });
 }
 
 function sendToPanel(payload) {
@@ -203,7 +206,7 @@ async function extractActive(force) {
   for (const leftover of [...openHealTabs]) {
     await closeHealTab(leftover);
   }
-  if (!result.record.cacheHit) await writeCache(res.doc.url, result.record);
+  if (!result.record.cacheHit) await writeCache(res.doc.url, result.record, settings.maskCache);
   return result;
 }
 

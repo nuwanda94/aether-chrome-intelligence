@@ -1,5 +1,6 @@
 const DEFAULTS = {
   maskPii: false,
+  maskCache: false,
   maxPages: 4,
   forceHeuristic: false,
 };
@@ -13,6 +14,7 @@ function clampPages(n) {
 async function load() {
   const bag = await chrome.storage.sync.get(DEFAULTS);
   document.getElementById("mask-pii").checked = Boolean(bag.maskPii);
+  document.getElementById("mask-cache").checked = Boolean(bag.maskCache);
   document.getElementById("max-pages").value = String(clampPages(bag.maxPages));
   document.getElementById("force-heuristic").checked = Boolean(bag.forceHeuristic);
 }
@@ -24,6 +26,7 @@ function setStatus(text) {
 async function save() {
   const settings = {
     maskPii: document.getElementById("mask-pii").checked,
+    maskCache: document.getElementById("mask-cache").checked,
     maxPages: clampPages(document.getElementById("max-pages").value),
     forceHeuristic: document.getElementById("force-heuristic").checked,
   };
