@@ -190,7 +190,6 @@ async function inferViaOffscreen(doc, forceHeuristic) {
     const ready = await ensureOffscreen();
     if (ready) {
       try {
-        // Kick off / wait for model download before inference when needed.
         await ensureNanoOffscreen();
         const res = await chrome.runtime.sendMessage({
           type: "AETHER_OFFSCREEN_INFER",
@@ -235,6 +234,70 @@ async function extractActive(force) {
   return result;
 }
 
+/** Open sourceUrl if needed, then highlight the stamped node in that tab. */
+async function highlightInPage(msg) {
+  const sourceUrl = String(msg?.sourceUrl || "").trim();
+  const sourceId = String(msg?.sourceId || "");
+  const snippet = String(msg?.snippet || "");
+  const kind = String(msg?.kind || "");
+
+  let tab = null;
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (sourceUrl) {
+    let targetOrigin = "";
+    let targetHref = sourceUrl;
+    try {
+      const u = new URL(sourceUrl);
+      targetOrigin = u.origin;
+      targetHref = u.href;
+    } catch {
+      targetHref = sourceUrl;
+    }
+
+    const all = await chrome.tabs.query({ currentWindow: true });
+    tab =
+      all.find((t) => t.url && t.url.split("#")[0] === targetHref.split("#")[0]) ||
+      all.find((t) => {
+        try {
+          return t.url && new URL(t.url).origin === targetOrigin;
+        } catch {
+          return false;
+        }
+      }) ||
+      null;
+
+    if (tab?.id) {
+      await chrome.tabs.update(tab.id, { active: true });
+      const samePage =
+        tab.url && tab.url.split("#")[0] === targetHref.split("#")[0];
+      if (!samePage && targetHref) {
+        await chrome.tabs.update(tab.id, { url: targetHref });
+        await waitComplete(tab.id, HEAL_TIMEOUT_MS).catch(() => {});
+      }
+    } else if (active?.id) {
+      tab = active;
+      await chrome.tabs.update(active.id, { active: true, url: targetHref });
+      await waitComplete(active.id, HEAL_TIMEOUT_MS).catch(() => {});
+    }
+  } else {
+    tab = active;
+  }
+
+  if (!tab?.id) return false;
+  try {
+    await sendToTab(tab.id, {
+      type: "AETHER_HIGHLIGHT",
+      sourceId,
+      snippet,
+      kind,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "AETHER_OFFSCREEN_INFER" || msg?.type === "AETHER_OFFSCREEN_ENSURE_NANO" || msg?.type === "AETHER_OFFSCREEN_PROBE_NANO") {
     return false;
@@ -248,19 +311,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "AETHER_HIGHLIGHT") {
-    chrome.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
-      if (!tab?.id) return;
-      try {
-        await sendToTab(tab.id, {
-          type: "AETHER_HIGHLIGHT",
-          sourceId: msg.sourceId,
-          snippet: msg.snippet,
-        });
-      } catch {
-        // Restricted page or inject failed — panel still gets ok below.
-      }
-    });
-    sendResponse({ ok: true });
+    highlightInPage(msg)
+      .then((ok) => sendResponse({ ok: Boolean(ok) }))
+      .catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (msg?.type === "AETHER_CLEAR_CACHE") {
