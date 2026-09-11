@@ -10,7 +10,7 @@ Chrome Web Store copy: [`STORE.md`](./STORE.md). Unpacked QA: [`tests/manual.md`
 2. **Serialize** semantic content to Markdown.
 3. **Infer** against a strict JSON schema (Nano or heuristic), tagging confidence.
 4. **Self-heal** — score in-page links with a zero-shot classifier, open high-probability About / Team / Impressum pages in background tabs, merge.
-5. **Cache** domain schemas in `chrome.storage.local`.
+5. **Cache** a slim domain schema in `chrome.storage.local` (`schemaVersion` 2: fields, executives, pagesVisited, language, extractedAt, short `sourceSnippet` — not full `markdownByUrl`). Entries older than 7 days or with a different version are ignored.
 6. **Edit** every field in the side panel with undo/redo, PII masking, conflict protection, and “verify source” highlight.
 
 Multilingual: language is taken from `lang` / the document, Unicode names and addresses are preserved (Japanese, German, and Latin scripts are first-class).
@@ -61,7 +61,7 @@ Store listing draft and privacy questionnaire notes live in [`STORE.md`](./STORE
 ## Privacy
 
 - PII mask toggle redacts emails and phones in the UI and in exports.
-- **Mask cache** (`maskCache` in `chrome.storage.sync`, default **off**): when enabled, emails and phones are redacted with `maskRecordForCache` before the domain schema is written to `chrome.storage.local`. Leave it off if you want later re-extracts to heal from cached contact fields. Clear the domain cache after turning it on so older unmasked blobs are gone.
+- **Mask cache** (`maskCache` in `chrome.storage.sync`, default **off**): when enabled, emails and phones are redacted with `maskRecordForCache` before the slim domain schema is written to `chrome.storage.local`. Leave it off if you want later re-extracts to heal from cached contact fields. Clear the domain cache after turning it on so older unmasked blobs are gone. Cached blobs never store full page markdown.
 - CSP on extension pages: `script-src 'self'; object-src 'self'`.
 - Untrusted page JS never executes inside the extension context.
 
