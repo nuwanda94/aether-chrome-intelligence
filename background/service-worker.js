@@ -4,6 +4,7 @@ import { runHarness } from "../lib/harness.js";
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
 const MAX_HEAL_TABS = 2;
 const HEAL_TIMEOUT_MS = 8000;
+const CONTENT_SCRIPT = "content/content-script.js";
 
 const DEFAULT_SETTINGS = {
   maskPii: false,
@@ -108,16 +109,25 @@ async function closeHealTab(tabId) {
   }
 }
 
-async function serializeTab(tabId) {
+/** Inject content script only when this tab has no listener yet. */
+async function injectContent(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: [CONTENT_SCRIPT],
+  });
+}
+
+async function sendToTab(tabId, message) {
   try {
-    return await chrome.tabs.sendMessage(tabId, { type: "AETHER_SERIALIZE" });
+    return await chrome.tabs.sendMessage(tabId, message);
   } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["content/content-script.js"],
-    });
-    return await chrome.tabs.sendMessage(tabId, { type: "AETHER_SERIALIZE" });
+    await injectContent(tabId);
+    return await chrome.tabs.sendMessage(tabId, message);
   }
+}
+
+async function serializeTab(tabId) {
+  return sendToTab(tabId, { type: "AETHER_SERIALIZE" });
 }
 
 async function fetchPageInBackground(url) {
@@ -223,15 +233,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "AETHER_HIGHLIGHT") {
-    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.id) {
-        chrome.tabs
-          .sendMessage(tab.id, {
-            type: "AETHER_HIGHLIGHT",
-            sourceId: msg.sourceId,
-            snippet: msg.snippet,
-          })
-          .catch(() => {});
+    chrome.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
+      if (!tab?.id) return;
+      try {
+        await sendToTab(tab.id, {
+          type: "AETHER_HIGHLIGHT",
+          sourceId: msg.sourceId,
+          snippet: msg.snippet,
+        });
+      } catch {
+        // Restricted page or inject failed — panel still gets ok below.
       }
     });
     sendResponse({ ok: true });

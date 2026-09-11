@@ -51,10 +51,23 @@ Productivity
 
 English (default). Additional locales: de, ja.
 
+## Permission rationale
+
+Aether does **not** register a persistent `content_scripts` match on `http://*/*` / `https://*/*`. The isolate in `content/content-script.js` is injected with `chrome.scripting.executeScript` only when the user extracts the active tab or when a short-lived heal tab is serialized, and again if Verify source needs a listener on that tab.
+
+| Permission | Why |
+| --- | --- |
+| `activeTab` | User-gesture access to the tab they opened the side panel on. |
+| `scripting` | On-demand inject of the packaged content script (no remote code). |
+| `tabs` | Open/close up to two hidden heal tabs and know when they finish loading. |
+| `host_permissions` (`http://*/*`, `https://*/*`) | Heal pages are same-site but not the tab the user clicked. `activeTab` does not cover those background URLs, so host access is required to inject and serialize scored About/Team/Impressum pages. The script is still injected only for those fetches and the active extract — it is not resident on every page. |
+| `storage` | Options, undo snapshots, optional per-origin schema cache. |
+| `sidePanel` / `offscreen` | Dossier UI and Prompt API isolation. |
+
 ## Privacy (store questionnaire notes)
 
 - Single purpose: extract and edit a local company record from the active tab and a small set of same-site heal pages.
-- Host permission is required to serialize the active corporate site and to open short-lived background tabs for scored About/Team/Impressum links.
+- Host permission is required to serialize the active corporate site and to open short-lived background tabs for scored About/Team/Impressum links. The content script is on-demand only (see Permission rationale).
 - Data used: page text and links from sites you visit while Extract is running; user edits; optional cached schema per origin.
 - Data shared with third parties: none. No analytics. No remote inference endpoint.
 - Remote code: none. All scripts ship in the package (MV3, script-src 'self').
