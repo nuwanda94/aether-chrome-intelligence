@@ -184,15 +184,32 @@ function highlight(sourceId, snippet, kind) {
     el.removeAttribute("data-aether-hit");
     el.style.outline = "";
     el.style.outlineOffset = "";
+    el.style.background = "";
   });
-  if (!sourceId && !snippet) return;
+  if (!sourceId && !snippet) return false;
   if (!document.querySelector("[data-aether-id]")) stampSourceIds();
   let el = findBySourceId(sourceId) || findBySnippet(snippet || sourceId, kind);
-  if (!el) return;
+  if (!el) {
+    // Fallback: search visible text nodes when stamps are missing (SPA re-render).
+    const needle = norm(snippet || sourceId).slice(0, 60);
+    if (needle) {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (norm(node.textContent).includes(needle)) {
+          el = node.parentElement;
+          break;
+        }
+      }
+    }
+  }
+  if (!el) return false;
   el.setAttribute("data-aether-hit", "1");
   el.style.outline = "2px solid #2c5548";
   el.style.outlineOffset = "4px";
+  el.style.background = "color-mix(in oklab, #2c5548 18%, transparent)";
   el.scrollIntoView({ behavior: "smooth", block: "center" });
+  return true;
 }
 
 function serialize() {
@@ -222,8 +239,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === "AETHER_HIGHLIGHT") {
-    highlight(msg.sourceId, msg.snippet, msg.kind);
-    sendResponse({ ok: true });
+    const found = highlight(msg.sourceId, msg.snippet, msg.kind);
+    sendResponse({ ok: true, found: Boolean(found) });
     return true;
   }
   return false;
