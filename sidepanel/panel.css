@@ -86,3 +86,7 @@ textarea { min-height: 72px; resize: vertical; }
   letter-spacing: 0.06em; padding: 8px 14px; border-radius: 99px;
   z-index: 20;
 }
+
+.head-actions { display: flex; gap: 6px; align-items: center; flex: none; }
+.timing { margin-top: 2px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
+.toolbar { flex-wrap: wrap; }
