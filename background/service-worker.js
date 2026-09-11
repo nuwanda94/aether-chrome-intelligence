@@ -1,10 +1,5 @@
-import {
-  extractFromMarkdown,
-  hashUrl,
-  maskRecordForCache,
-  readCacheRecord,
-  toCachePayload,
-} from "../lib/engine.js";
+import { extractFromMarkdown, hashUrl, maskRecordForCache } from "../lib/engine.js";
+import { readCacheRecord, toCachePayload } from "../lib/cache.js";
 import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
