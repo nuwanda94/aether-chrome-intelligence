@@ -23,6 +23,8 @@
       </label>
       <button type="button" class="btn ghost" id="json-btn">JSON</button>
       <button type="button" class="btn ghost" id="md-btn">MD</button>
+      <button type="button" class="btn ghost" id="csv-btn">CSV</button>
+      <button type="button" class="btn ghost" id="copy-btn">Copy</button>
     </div>
     <nav class="tabs" role="tablist">
       <button type="button" class="tab on" data-tab="record">Record</button>
@@ -35,6 +37,7 @@
         <p>Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.</p>
       </div>
     </main>
+    <div id="toast" class="toast" hidden role="status"></div>
     <dialog id="conflict">
       <h2 class="serif">Merge conflict</h2>
       <p class="muted">Self-heal found values for fields you already edited.</p>

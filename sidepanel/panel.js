@@ -1,4 +1,4 @@
-import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson } from "../lib/engine.js";
+import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson, executivesToCsv } from "../lib/engine.js";
 import { loadHistory, saveHistory, originFromRecord } from "../lib/history.js";
 
 const state = {
@@ -54,6 +54,17 @@ function snapshot() {
   if (state.past.length > 40) state.past.shift();
   state.future = [];
   persistHistory();
+}
+
+function toast(msg) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    el.hidden = true;
+  }, 1600);
 }
 
 function render() {
@@ -259,6 +270,20 @@ $("md-btn").addEventListener("click", () => {
     if (v) lines.push(`- **${FIELD_LABELS[key]}**: ${v}`);
   }
   download("aether-record.md", lines.join("\n"), "text/markdown");
+});
+$("csv-btn").addEventListener("click", () => {
+  if (!state.record) return;
+  download("aether-executives.csv", executivesToCsv(state.record, state.maskPii), "text/csv");
+});
+$("copy-btn").addEventListener("click", async () => {
+  if (!state.record) return;
+  const text = recordToJson(state.record, state.maskPii);
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(state.maskPii ? "Copied masked JSON" : "Copied JSON");
+  } catch {
+    toast("Clipboard unavailable");
+  }
 });
 
 chrome.runtime.onMessage.addListener((msg) => {

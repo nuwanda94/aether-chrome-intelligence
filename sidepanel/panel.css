@@ -80,3 +80,9 @@ textarea { min-height: 72px; resize: vertical; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .chip { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; background: var(--paper-2); padding: 2px 6px; border-radius: 4px; }
 .err { border: 1px solid color-mix(in oklab, var(--low) 40%, white); background: color-mix(in oklab, var(--low) 10%, white); color: var(--low); padding: 8px 10px; border-radius: 4px; margin-bottom: 12px; }
+.toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: var(--paper); font-size: 12px;
+  letter-spacing: 0.06em; padding: 8px 14px; border-radius: 99px;
+  z-index: 20;
+}
