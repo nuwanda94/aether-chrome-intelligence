@@ -1,4 +1,10 @@
-import { extractFromMarkdown, hashUrl, maskRecordForCache } from "../lib/engine.js";
+import {
+  extractFromMarkdown,
+  hashUrl,
+  maskRecordForCache,
+  readCacheRecord,
+  toCachePayload,
+} from "../lib/engine.js";
 import { runHarness } from "../lib/harness.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
@@ -65,11 +71,12 @@ function cacheKey(url) {
 async function readCache(url) {
   const key = cacheKey(url);
   const bag = await chrome.storage.local.get(key);
-  return bag[key] || null;
+  return readCacheRecord(bag[key] || null);
 }
 
 async function writeCache(url, record, maskCache) {
-  const payload = maskCache ? maskRecordForCache(record) : record;
+  const slim = toCachePayload(record);
+  const payload = maskCache ? maskRecordForCache(slim) : slim;
   await chrome.storage.local.set({ [cacheKey(url)]: payload });
 }
 
