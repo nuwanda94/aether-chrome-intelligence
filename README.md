@@ -2,6 +2,8 @@
 
 Manifest V3 side-panel extension that turns a corporate site into a source-traced company record. Extraction runs **on-device** via [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api) when available, with a deterministic heuristic fallback. Missing C-suite, address, or email trips a self-healing navigation harness.
 
+Chrome Web Store copy: [`STORE.md`](./STORE.md). Unpacked QA: [`tests/manual.md`](./tests/manual.md).
+
 ## What it does
 
 1. **Sanitize** the live DOM (scripts, SVGs, tracking pixels, inline styles).
@@ -24,6 +26,8 @@ Multilingual: language is taken from `lang` / the document, Unicode names and ad
 Optional Nano: `chrome://flags/#prompt-api-for-gemini-nano` → Enabled, restart, wait for the model download (`chrome://components` → Optimization Guide).
 
 Without Nano, Aether still extracts via the local heuristic engine.
+
+Follow [`tests/manual.md`](./tests/manual.md) for a 10-step QA pass after load.
 
 ## Permissions
 
@@ -51,6 +55,8 @@ Circuit breakers: max depth 2, max 4 pages, visited-URL registry.
 
 v2.0 is the scaffold (MV3, sanitize, Nano/heuristic, self-heal, dossier UI).
 Remaining work is tracked in [`PLAN.md`](./PLAN.md) / [`plan.json`](./plan.json). An hourly automation implements **one pending item per run**.
+
+Store listing draft and privacy questionnaire notes live in [`STORE.md`](./STORE.md).
 
 ## Privacy
 
