@@ -277,3 +277,62 @@ test("applyJson uses validated payload and infer falls back on invalid Nano JSON
     else globalThis.LanguageModel = prev;
   }
 });
+
+test("extractExecs accepts plain Name — Role without markdown bold", () => {
+  const rec = extractFromMarkdown({
+    url: "https://acme.example/team",
+    title: "Team",
+    lang: "en",
+    markdown: `# Leadership
+
+Jane Doe — Chief Executive Officer
+Pat Lee — Head of Engineering
+`,
+  });
+  assert.equal(rec.executives.length, 2);
+  assert.equal(rec.executives[0].name, "Jane Doe");
+  assert.equal(rec.executives[0].role, "Chief Executive Officer");
+  assert.equal(rec.executives[1].name, "Pat Lee");
+  assert.match(rec.executives[1].role, /Head of Engineering/);
+});
+
+test("extractExecs accepts Name, Title lines when title is a role", () => {
+  const rec = extractFromMarkdown({
+    url: "https://acme.example/people",
+    title: "People",
+    lang: "en",
+    markdown: `# People
+
+Morgan Blake, Chief Financial Officer
+Alex Rivera, Vice President
+`,
+  });
+  assert.ok(rec.executives.some((e) => e.name === "Morgan Blake" && /Chief Financial Officer/.test(e.role)));
+  assert.ok(rec.executives.some((e) => e.name === "Alex Rivera" && /Vice President/.test(e.role)));
+});
+
+test("extractExecs accepts DE/JP role tokens without bold markers", () => {
+  const de = extractFromMarkdown({
+    url: "https://beispiel.de/vorstand",
+    title: "Vorstand",
+    lang: "de",
+    markdown: `# Vorstand
+
+Anna Schmidt — Geschäftsführerin
+`,
+  });
+  assert.equal(de.executives[0].name, "Anna Schmidt");
+  assert.match(de.executives[0].role, /Geschäftsführerin/);
+
+  const jp = extractFromMarkdown({
+    url: "https://example.co.jp/officers",
+    title: "役員",
+    lang: "ja",
+    markdown: `# 役員
+
+山田 太郎 — 代表取締役社長
+`,
+  });
+  assert.equal(jp.executives[0].name, "山田 太郎");
+  assert.equal(jp.executives[0].role, "代表取締役社長");
+});
