@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Aether — Company Intelligence",
-  "short_name": "Aether",
+  "default_locale": "en",
+  "name": "__MSG_extName__",
+  "short_name": "__MSG_extShortName__",
   "version": "2.1.0",
-  "description": "Autonomous on-device company intelligence. Gemini Nano extraction, self-healing navigation, and source-traced records.",
+  "description": "__MSG_extDescription__",
   "minimum_chrome_version": "123",
   "permissions": [
     "sidePanel",
@@ -26,7 +27,7 @@
     "open_in_tab": false
   },
   "action": {
-    "default_title": "Open Aether",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

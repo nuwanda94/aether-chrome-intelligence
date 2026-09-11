@@ -1,0 +1,101 @@
+{
+  "extName": {
+    "message": "Aether — Company Intelligence"
+  },
+  "extShortName": {
+    "message": "Aether"
+  },
+  "extDescription": {
+    "message": "Autonomous on-device company intelligence. Gemini Nano extraction, self-healing navigation, and source-traced records."
+  },
+  "actionTitle": {
+    "message": "Open Aether"
+  },
+  "extract": {
+    "message": "Extract"
+  },
+  "extractRunning": {
+    "message": "Running"
+  },
+  "record": {
+    "message": "Record"
+  },
+  "sources": {
+    "message": "Sources"
+  },
+  "log": {
+    "message": "Log"
+  },
+  "maskPii": {
+    "message": "Mask PII"
+  },
+  "cSuite": {
+    "message": "C-suite"
+  },
+  "verifySource": {
+    "message": "Verify source"
+  },
+  "emptyDossier": {
+    "message": "Empty dossier"
+  },
+  "emptyHint": {
+    "message": "Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages."
+  },
+  "noExecutives": {
+    "message": "No executives on this pass."
+  },
+  "logHint": {
+    "message": "Harness log appears after Extract."
+  },
+  "mergeConflict": {
+    "message": "Merge conflict"
+  },
+  "mergeConflictHint": {
+    "message": "Self-heal found values for fields you already edited."
+  },
+  "keepMine": {
+    "message": "Keep mine"
+  },
+  "takeIncoming": {
+    "message": "Take incoming"
+  },
+  "yours": {
+    "message": "Yours"
+  },
+  "incoming": {
+    "message": "Incoming"
+  },
+  "complete": {
+    "message": "complete"
+  },
+  "partial": {
+    "message": "partial"
+  },
+  "copiedJson": {
+    "message": "Copied JSON"
+  },
+  "copiedMaskedJson": {
+    "message": "Copied masked JSON"
+  },
+  "clipboardUnavailable": {
+    "message": "Clipboard unavailable"
+  },
+  "extractFailed": {
+    "message": "Extract failed"
+  },
+  "engineNano": {
+    "message": "Gemini Nano"
+  },
+  "engineHeuristic": {
+    "message": "Heuristic · Nano unavailable"
+  },
+  "placeholderName": {
+    "message": "Name"
+  },
+  "placeholderRole": {
+    "message": "Role"
+  },
+  "placeholderEmail": {
+    "message": "Email"
+  }
+}

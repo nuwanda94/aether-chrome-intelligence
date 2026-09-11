@@ -1,0 +1,101 @@
+{
+  "extName": {
+    "message": "Aether — 企業インテリジェンス"
+  },
+  "extShortName": {
+    "message": "Aether"
+  },
+  "extDescription": {
+    "message": "デバイス上の自律型企業インテリジェンス。Gemini Nano による抽出、自己修復ナビゲーション、出典付きレコード。"
+  },
+  "actionTitle": {
+    "message": "Aether を開く"
+  },
+  "extract": {
+    "message": "抽出"
+  },
+  "extractRunning": {
+    "message": "実行中"
+  },
+  "record": {
+    "message": "レコード"
+  },
+  "sources": {
+    "message": "出典"
+  },
+  "log": {
+    "message": "ログ"
+  },
+  "maskPii": {
+    "message": "PIIをマスク"
+  },
+  "cSuite": {
+    "message": "経営陣"
+  },
+  "verifySource": {
+    "message": "出典を確認"
+  },
+  "emptyDossier": {
+    "message": "空のドシエ"
+  },
+  "emptyHint": {
+    "message": "開いているタブを抽出します。経営陣や住所が欠けると評価済みサブページの自己修復が走ります。"
+  },
+  "noExecutives": {
+    "message": "この回の経営陣はありません。"
+  },
+  "logHint": {
+    "message": "ハーネスログは抽出後に表示されます。"
+  },
+  "mergeConflict": {
+    "message": "マージ競合"
+  },
+  "mergeConflictHint": {
+    "message": "編集済みフィールドに対し、自己修復が値を見つけました。"
+  },
+  "keepMine": {
+    "message": "自分の値を残す"
+  },
+  "takeIncoming": {
+    "message": "新しい値を採用"
+  },
+  "yours": {
+    "message": "現在"
+  },
+  "incoming": {
+    "message": "入力"
+  },
+  "complete": {
+    "message": "完了"
+  },
+  "partial": {
+    "message": "部分"
+  },
+  "copiedJson": {
+    "message": "JSONをコピーしました"
+  },
+  "copiedMaskedJson": {
+    "message": "マスク済みJSONをコピーしました"
+  },
+  "clipboardUnavailable": {
+    "message": "クリップボードを使えません"
+  },
+  "extractFailed": {
+    "message": "抽出に失敗しました"
+  },
+  "engineNano": {
+    "message": "Gemini Nano"
+  },
+  "engineHeuristic": {
+    "message": "ヒューリスティック · Nano不可"
+  },
+  "placeholderName": {
+    "message": "氏名"
+  },
+  "placeholderRole": {
+    "message": "役職"
+  },
+  "placeholderEmail": {
+    "message": "メール"
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "extName": {
+    "message": "Aether — Unternehmensintelligenz"
+  },
+  "extShortName": {
+    "message": "Aether"
+  },
+  "extDescription": {
+    "message": "Autonome On-Device-Unternehmensintelligenz. Gemini-Nano-Extraktion, selbstheilende Navigation und quellenbelegte Datensätze."
+  },
+  "actionTitle": {
+    "message": "Aether öffnen"
+  },
+  "extract": {
+    "message": "Extrahieren"
+  },
+  "extractRunning": {
+    "message": "Läuft"
+  },
+  "record": {
+    "message": "Datensatz"
+  },
+  "sources": {
+    "message": "Quellen"
+  },
+  "log": {
+    "message": "Protokoll"
+  },
+  "maskPii": {
+    "message": "PII maskieren"
+  },
+  "cSuite": {
+    "message": "Vorstand"
+  },
+  "verifySource": {
+    "message": "Quelle prüfen"
+  },
+  "emptyDossier": {
+    "message": "Leeres Dossier"
+  },
+  "emptyHint": {
+    "message": "Extrahieren Sie den offenen Tab. Fehlender Vorstand oder Adresse löst einen Self-Heal über bewertete Unterseiten aus."
+  },
+  "noExecutives": {
+    "message": "Keine Führungskräfte in diesem Durchlauf."
+  },
+  "logHint": {
+    "message": "Das Harness-Protokoll erscheint nach Extrahieren."
+  },
+  "mergeConflict": {
+    "message": "Merge-Konflikt"
+  },
+  "mergeConflictHint": {
+    "message": "Self-Heal hat Werte für Felder gefunden, die Sie bereits bearbeitet haben."
+  },
+  "keepMine": {
+    "message": "Meine behalten"
+  },
+  "takeIncoming": {
+    "message": "Neue übernehmen"
+  },
+  "yours": {
+    "message": "Ihre"
+  },
+  "incoming": {
+    "message": "Eingehend"
+  },
+  "complete": {
+    "message": "vollständig"
+  },
+  "partial": {
+    "message": "teilweise"
+  },
+  "copiedJson": {
+    "message": "JSON kopiert"
+  },
+  "copiedMaskedJson": {
+    "message": "Maskiertes JSON kopiert"
+  },
+  "clipboardUnavailable": {
+    "message": "Zwischenablage nicht verfügbar"
+  },
+  "extractFailed": {
+    "message": "Extraktion fehlgeschlagen"
+  },
+  "engineNano": {
+    "message": "Gemini Nano"
+  },
+  "engineHeuristic": {
+    "message": "Heuristik · Nano nicht verfügbar"
+  },
+  "placeholderName": {
+    "message": "Name"
+  },
+  "placeholderRole": {
+    "message": "Rolle"
+  },
+  "placeholderEmail": {
+    "message": "E-Mail"
+  }
+}

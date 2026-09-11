@@ -1,6 +1,57 @@
 import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson, executivesToCsv } from "../lib/engine.js";
 import { loadHistory, saveHistory, originFromRecord } from "../lib/history.js";
 
+const FALLBACK = {
+  extract: "Extract",
+  extractRunning: "Running",
+  record: "Record",
+  sources: "Sources",
+  log: "Log",
+  maskPii: "Mask PII",
+  cSuite: "C-suite",
+  verifySource: "Verify source",
+  emptyDossier: "Empty dossier",
+  emptyHint:
+    "Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.",
+  noExecutives: "No executives on this pass.",
+  logHint: "Harness log appears after Extract.",
+  mergeConflict: "Merge conflict",
+  mergeConflictHint: "Self-heal found values for fields you already edited.",
+  keepMine: "Keep mine",
+  takeIncoming: "Take incoming",
+  yours: "Yours",
+  incoming: "Incoming",
+  complete: "complete",
+  partial: "partial",
+  copiedJson: "Copied JSON",
+  copiedMaskedJson: "Copied masked JSON",
+  clipboardUnavailable: "Clipboard unavailable",
+  extractFailed: "Extract failed",
+  engineNano: "Gemini Nano",
+  engineHeuristic: "Heuristic · Nano unavailable",
+  placeholderName: "Name",
+  placeholderRole: "Role",
+  placeholderEmail: "Email",
+};
+
+function t(key) {
+  try {
+    const msg = chrome?.i18n?.getMessage?.(key);
+    if (msg) return msg;
+  } catch {
+    /* tests / no chrome */
+  }
+  return FALLBACK[key] || key;
+}
+
+function applyStaticI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    const text = t(key);
+    if (text) el.textContent = text;
+  });
+}
+
 const state = {
   record: null,
   events: [],
@@ -70,8 +121,8 @@ function toast(msg) {
 function render() {
   $("undo-btn").disabled = !state.past.length;
   $("redo-btn").disabled = !state.future.length;
-  document.querySelectorAll(".tab").forEach((t) => {
-    t.classList.toggle("on", t.dataset.tab === state.tab);
+  document.querySelectorAll(".tab").forEach((tabEl) => {
+    tabEl.classList.toggle("on", tabEl.dataset.tab === state.tab);
   });
   if (state.tab === "log") {
     body.innerHTML = state.events.length
@@ -81,7 +132,7 @@ function render() {
               `<div class="log-item"><span class="dot ${e.status === "warn" || e.status === "error" ? "warn" : ""}"></span><div><div><span class="chip">${e.stage}</span> ${esc(e.message)}</div>${e.detail ? `<div class="muted">${esc(e.detail)}</div>` : ""}</div></div>`,
           )
           .join("")
-      : `<p class="muted">Harness log appears after Extract.</p>`;
+      : `<p class="muted">${esc(t("logHint"))}</p>`;
     return;
   }
   if (state.tab === "sources") {
@@ -108,24 +159,24 @@ function render() {
         : `<input data-field="${key}" value="${esc(val)}" />`;
     const sourceId = f.sourceId || "";
     const snippet = f.sourceSnippet || f.value || "";
-    return `<div class="field"><div class="lab"><span class="k">${String(i + 1).padStart(2, "0")} ${FIELD_LABELS[key]}</span><span class="badge ${f.confidence}">${f.verified ? "✓ " : ""}${f.confidence}</span></div>${control}<button type="button" class="btn ghost" data-src="${esc(f.sourceUrl)}" data-source-id="${esc(sourceId)}" data-kind="${esc(fieldKind(key))}" data-snippet="${esc(snippet)}">Verify source</button></div>`;
+    return `<div class="field"><div class="lab"><span class="k">${String(i + 1).padStart(2, "0")} ${FIELD_LABELS[key]}</span><span class="badge ${f.confidence}">${f.verified ? "✓ " : ""}${f.confidence}</span></div>${control}<button type="button" class="btn ghost" data-src="${esc(f.sourceUrl)}" data-source-id="${esc(sourceId)}" data-kind="${esc(fieldKind(key))}" data-snippet="${esc(snippet)}">${esc(t("verifySource"))}</button></div>`;
   }).join("");
   const execs = rec.executives
     .map(
       (e) =>
-        `<div class="card"><div class="lab"><span class="badge ${e.confidence}">${e.confidence}</span></div><input data-exec="${e.id}" data-k="name" value="${esc(e.name)}" placeholder="Name" /><input data-exec="${e.id}" data-k="role" value="${esc(e.role)}" placeholder="Role" style="margin-top:6px" /><input data-exec="${e.id}" data-k="email" value="${esc(state.maskPii && e.email ? maskValue("email", e.email) : e.email)}" placeholder="Email" style="margin-top:6px" /><button type="button" class="btn ghost" data-src="${esc(e.sourceUrl || "")}" data-source-id="${esc(e.sourceId || "")}" data-kind="person" data-snippet="${esc([e.name, e.role].filter(Boolean).join(" "))}">Verify source</button></div>`,
+        `<div class="card"><div class="lab"><span class="badge ${e.confidence}">${e.confidence}</span></div><input data-exec="${e.id}" data-k="name" value="${esc(e.name)}" placeholder="${esc(t("placeholderName"))}" /><input data-exec="${e.id}" data-k="role" value="${esc(e.role)}" placeholder="${esc(t("placeholderRole"))}" style="margin-top:6px" /><input data-exec="${e.id}" data-k="email" value="${esc(state.maskPii && e.email ? maskValue("email", e.email) : e.email)}" placeholder="${esc(t("placeholderEmail"))}" style="margin-top:6px" /><button type="button" class="btn ghost" data-src="${esc(e.sourceUrl || "")}" data-source-id="${esc(e.sourceId || "")}" data-kind="person" data-snippet="${esc([e.name, e.role].filter(Boolean).join(" "))}">${esc(t("verifySource"))}</button></div>`,
     )
     .join("");
   body.innerHTML = `
     ${state.error ? `<div class="err">${esc(state.error)}</div>` : ""}
     <div class="chips">
       <span class="chip">${esc(rec.languageName || rec.language)}</span>
-      <span class="chip">${rec.complete ? "complete" : "partial"}</span>
+      <span class="chip">${rec.complete ? t("complete") : t("partial")}</span>
       ${rec.cacheHit ? `<span class="chip">cache</span>` : ""}
     </div>
     ${fields}
-    <div class="k" style="margin:16px 0 8px">C-suite</div>
-    ${execs || `<p class="muted">No executives on this pass.</p>`}
+    <div class="k" style="margin:16px 0 8px">${esc(t("cSuite"))}</div>
+    ${execs || `<p class="muted">${esc(t("noExecutives"))}</p>`}
   `;
   body.querySelectorAll("[data-field]").forEach((el) => {
     el.addEventListener("change", () => {
@@ -161,7 +212,7 @@ function render() {
 }
 
 function empty() {
-  body.innerHTML = `<div class="empty"><p class="serif">Empty dossier</p><p>Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.</p></div>`;
+  body.innerHTML = `<div class="empty"><p class="serif">${esc(t("emptyDossier"))}</p><p>${esc(t("emptyHint"))}</p></div>`;
 }
 
 function esc(s) {
@@ -173,16 +224,16 @@ function esc(s) {
 
 $("extract-btn").addEventListener("click", async () => {
   $("extract-btn").disabled = true;
-  $("extract-btn").textContent = "Running";
+  $("extract-btn").textContent = t("extractRunning");
   state.events = [];
   state.error = "";
   state.tab = "log";
   render();
   const res = await chrome.runtime.sendMessage({ type: "AETHER_EXTRACT" });
   $("extract-btn").disabled = false;
-  $("extract-btn").textContent = "Extract";
+  $("extract-btn").textContent = t("extract");
   if (!res?.ok) {
-    state.error = res?.error || "Extract failed";
+    state.error = res?.error || t("extractFailed");
     state.tab = "record";
     render();
     return;
@@ -193,14 +244,14 @@ $("extract-btn").addEventListener("click", async () => {
   state.future = [];
   state.origin = originFromRecord(res.record);
   await persistHistory();
-  $("engine-label").textContent = res.engine === "nano" ? "Gemini Nano" : "Heuristic · Nano unavailable";
+  $("engine-label").textContent = res.engine === "nano" ? t("engineNano") : t("engineHeuristic");
   state.tab = "record";
   render();
   if (state.conflicts.length) {
     $("conflict-list").innerHTML = state.conflicts
       .map(
         (c) =>
-          `<div class="card"><div class="k">${esc(c.label)}</div><div>Yours: ${esc(c.current)}</div><div class="muted">Incoming: ${esc(c.incoming)}</div></div>`,
+          `<div class="card"><div class="k">${esc(c.label)}</div><div>${esc(t("yours"))}: ${esc(c.current)}</div><div class="muted">${esc(t("incoming"))}: ${esc(c.incoming)}</div></div>`,
       )
       .join("");
     $("conflict").showModal();
@@ -221,9 +272,9 @@ $("take-btn").addEventListener("click", () => {
   render();
 });
 
-document.querySelectorAll(".tab").forEach((t) => {
-  t.addEventListener("click", () => {
-    state.tab = t.dataset.tab;
+document.querySelectorAll(".tab").forEach((tabEl) => {
+  tabEl.addEventListener("click", () => {
+    state.tab = tabEl.dataset.tab;
     render();
   });
 });
@@ -280,9 +331,9 @@ $("copy-btn").addEventListener("click", async () => {
   const text = recordToJson(state.record, state.maskPii);
   try {
     await navigator.clipboard.writeText(text);
-    toast(state.maskPii ? "Copied masked JSON" : "Copied JSON");
+    toast(state.maskPii ? t("copiedMaskedJson") : t("copiedJson"));
   } catch {
-    toast("Clipboard unavailable");
+    toast(t("clipboardUnavailable"));
   }
 });
 
@@ -309,4 +360,5 @@ async function restoreForActiveTab() {
   }
 }
 
+applyStaticI18n();
 restoreForActiveTab().then(render);

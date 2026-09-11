@@ -12,14 +12,14 @@
         <p class="wordmark">Aether</p>
         <p class="meta" id="engine-label">On-device · local-first</p>
       </div>
-      <button type="button" class="btn primary" id="extract-btn">Extract</button>
+      <button type="button" class="btn primary" id="extract-btn" data-i18n="extract">Extract</button>
     </header>
     <div class="toolbar">
       <button type="button" class="icon" id="undo-btn" title="Undo">↩</button>
       <button type="button" class="icon" id="redo-btn" title="Redo">↪</button>
       <label class="toggle">
         <input type="checkbox" id="pii-toggle" />
-        Mask PII
+        <span data-i18n="maskPii">Mask PII</span>
       </label>
       <button type="button" class="btn ghost" id="json-btn">JSON</button>
       <button type="button" class="btn ghost" id="md-btn">MD</button>
@@ -27,24 +27,24 @@
       <button type="button" class="btn ghost" id="copy-btn">Copy</button>
     </div>
     <nav class="tabs" role="tablist">
-      <button type="button" class="tab on" data-tab="record">Record</button>
-      <button type="button" class="tab" data-tab="sources">Sources</button>
-      <button type="button" class="tab" data-tab="log">Log</button>
+      <button type="button" class="tab on" data-tab="record" data-i18n="record">Record</button>
+      <button type="button" class="tab" data-tab="sources" data-i18n="sources">Sources</button>
+      <button type="button" class="tab" data-tab="log" data-i18n="log">Log</button>
     </nav>
     <main id="panel-body">
       <div class="empty">
-        <p class="serif">Empty dossier</p>
-        <p>Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.</p>
+        <p class="serif" data-i18n="emptyDossier">Empty dossier</p>
+        <p data-i18n="emptyHint">Extract the open tab. Missing C-suite or address triggers a self-heal pass over scored sub-pages.</p>
       </div>
     </main>
     <div id="toast" class="toast" hidden role="status"></div>
     <dialog id="conflict">
-      <h2 class="serif">Merge conflict</h2>
-      <p class="muted">Self-heal found values for fields you already edited.</p>
+      <h2 class="serif" data-i18n="mergeConflict">Merge conflict</h2>
+      <p class="muted" data-i18n="mergeConflictHint">Self-heal found values for fields you already edited.</p>
       <div id="conflict-list"></div>
       <div class="row">
-        <button type="button" class="btn ghost" id="keep-btn">Keep mine</button>
-        <button type="button" class="btn primary" id="take-btn">Take incoming</button>
+        <button type="button" class="btn ghost" id="keep-btn" data-i18n="keepMine">Keep mine</button>
+        <button type="button" class="btn primary" id="take-btn" data-i18n="takeIncoming">Take incoming</button>
       </div>
     </dialog>
     <script type="module" src="panel.js"></script>
