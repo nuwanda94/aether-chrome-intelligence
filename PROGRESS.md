@@ -2,8 +2,11 @@
 
 Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
+**Plan complete.** All items F01–F03, 1A, 3A, and P01–P12 are `done`. No pending work remains in `plan.json`.
+
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 11:04 IST | Plan complete | All plan.json items are done. No further implementation this run. |
 | 2026-09-11 10:03 IST | P12 Web Store listing draft + test script | Added STORE.md (name, short/long description, privacy questionnaire) and tests/manual.md (10-step unpacked QA); README links both. |
 | 2026-09-11 09:04 IST | P11 Mask PII before cache write | Optional `maskCache` (default off) redacts emails/phones via `maskRecordForCache` before `chrome.storage.local` schema writes; documented in README. |
 | 2026-09-11 08:00 IST | P10 Side panel UI locale | chrome.i18n `_locales/{en,de,ja}` + `default_locale`; Extract/Record/Mask PII/C-suite and other chrome strings localize; extracted JP names unchanged. |
