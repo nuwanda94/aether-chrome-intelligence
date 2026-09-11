@@ -2,10 +2,11 @@
 
 Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
-**v2.1 complete.** v2.2 hardening backlog **R01–R12** is open (principal review). Next run: **R02 Validate Nano JSON against CompanyRecord schema**.
+**v2.1 complete.** v2.2 hardening in progress. Next run: **R03 Broader heuristic executive patterns**.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 13:00 IST | R02 Validate Nano JSON against CompanyRecord schema | validateCompanyPayload accepts string fields + named execs, rejects bad types; infer falls back to heuristic. |
 | 2026-09-11 12:36 IST | R01 Attach sourceIds to record fields | Map doc.sources onto company/email/phone/exec sourceId in extract + Nano applyJson; panel already prefers sourceId; unit test asserts fixture stamps. |
 | 2026-09-11 12:04 IST | v2.2 backlog opened | Principal review findings filed as R01–R12 (pending). Next: R01 sourceIds on fields. |
 | 2026-09-11 11:04 IST | Plan complete (v2.1) | All F/P items done. Superseded by v2.2 backlog. |
