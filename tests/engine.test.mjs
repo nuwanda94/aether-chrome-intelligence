@@ -11,9 +11,9 @@ import {
   estimateTokens,
   TOKEN_LIMIT,
   matchSourceId,
-  validateCompanyPayload,
 } from "../lib/engine.js";
 import { inferDocument, applyJson } from "../lib/nano.js";
+import { validateCompanyPayload } from "../lib/schema.js";
 
 const EN_DOC = {
   url: "https://acme.example/",
@@ -135,7 +135,7 @@ test("mergeRecords reports dirty-field conflicts and keeps the user value", () =
   const patch = extractFromMarkdown({
     ...EN_DOC,
     url: "https://acme.example/contact",
-    markdown: `# Acme Corp\\n\\nother@acme.example\\n`,
+    markdown: `# Acme Corp\n\nother@acme.example\n`,
   });
   patch.fields.email.value = "other@acme.example";
   patch.fields.email.confidence = "high";
@@ -150,7 +150,7 @@ test("mergeRecords fills empty fields and appends new executives", () => {
     url: "https://acme.example/",
     title: "Acme",
     lang: "en",
-    markdown: `# Acme\\n\\nJust a homepage.\\n`,
+    markdown: `# Acme\n\nJust a homepage.\n`,
   });
   const patch = extractFromMarkdown(EN_DOC);
   const { merged, conflicts } = mergeRecords(base, patch);
