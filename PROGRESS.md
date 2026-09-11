@@ -2,10 +2,11 @@
 
 Hourly automation: **one `pending` item from `plan.json` per run**, in id order.
 
-**v2.1 complete.** v2.2 hardening in progress. Next run: **R03 Broader heuristic executive patterns**.
+**v2.1 complete.** v2.2 hardening in progress. Next run: **R04 Score links from heal pages**.
 
 | When (IST) | Item | Result |
 | --- | --- | --- |
+| 2026-09-11 13:04 IST | R03 Broader heuristic executive patterns | extractExecs parses Name — Role, Name, Title, and DE/JP role lines without bold; 17 engine tests pass. |
 | 2026-09-11 13:00 IST | R02 Validate Nano JSON against CompanyRecord schema | validateCompanyPayload accepts string fields + named execs, rejects bad types; infer falls back to heuristic. |
 | 2026-09-11 12:36 IST | R01 Attach sourceIds to record fields | Map doc.sources onto company/email/phone/exec sourceId in extract + Nano applyJson; panel already prefers sourceId; unit test asserts fixture stamps. |
 | 2026-09-11 12:04 IST | v2.2 backlog opened | Principal review findings filed as R01–R12 (pending). Next: R01 sourceIds on fields. |
