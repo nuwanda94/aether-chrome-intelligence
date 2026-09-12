@@ -377,8 +377,25 @@
               title: "About Acme Corp",
               lang: "en",
               markdown: `# About Acme Corp\n\nFounded in 2012, Acme Corp manufactures smart IoT sensors and connected hardware for enterprise facilities.\n`,
+              links: [
+                { href: "https://acme.example/locations", text: "Global Locations" },
+                { href: "https://acme.example/contact", text: "Contact & Support" },
+              ],
+            },
+            "https://acme.example/locations": {
+              url: "https://acme.example/locations",
+              title: "Acme Corp — Global Locations",
+              lang: "en",
+              markdown: `# Acme Corp Locations\n\nHeadquarters: 100 Market Street, San Francisco, CA 94105\nEuropean Office: Friedrichstraße 45, 10117 Berlin, Germany\nAPAC Hub: 1-1-1 Marunouchi, Chiyoda-ku, Tokyo 100-0005, Japan\n`,
               links: [],
-            }
+            },
+            "https://acme.example/contact": {
+              url: "https://acme.example/contact",
+              title: "Acme Corp — Contact & Support",
+              lang: "en",
+              markdown: `# Contact Acme Corp\n\nToll-Free Support: +1 800-555-0199\nHeadquarters Phone: +1 415-555-0199\nEuropean Desk: +49 30 98765432\nEmail: press@acme.example\n`,
+              links: [],
+            },
           },
           render() {
             return `
@@ -386,9 +403,11 @@
               <p class="lead">Acme Corp builds industrial sensors for global manufacturers and ships from three continents.</p>
               
               <div class="info-card">
-                <h2>Corporate Headquarters</h2>
-                <p><strong>Address:</strong> 100 Market Street, San Francisco, CA 94105</p>
-                <p><strong>Contact:</strong> <a href="mailto:press@acme.example">press@acme.example</a> or <a href="tel:+14155550199">+1 415-555-0199</a></p>
+                <h2>Corporate Headquarters & Offices</h2>
+                <p><strong>Primary Address:</strong> 100 Market Street, San Francisco, CA 94105</p>
+                <p><strong>European Office:</strong> Friedrichstraße 45, 10117 Berlin, Germany</p>
+                <p><strong>Contact:</strong> <a href="mailto:press@acme.example">press@acme.example</a></p>
+                <p><strong>Toll-Free Support:</strong> <a href="tel:+18005550199">+1 800-555-0199</a> | <strong>HQ Phone:</strong> <a href="tel:+14155550199">+1 415-555-0199</a></p>
                 <p><strong>Website:</strong> <a href="https://acme.example">https://acme.example</a></p>
                 <p><strong>LinkedIn:</strong> <a href="https://linkedin.com/company/acme-corp">linkedin.com/company/acme-corp</a></p>
               </div>
@@ -402,7 +421,7 @@
               </ul>
 
               <h2>Navigation</h2>
-              <p>Explore more details: <a href="https://acme.example/leadership">Leadership</a> · <a href="https://acme.example/about">About Us</a></p>
+              <p>Explore more details: <a href="https://acme.example/leadership">Leadership</a> · <a href="https://acme.example/about">About Us</a> · <a href="https://acme.example/locations">Locations</a> · <a href="https://acme.example/contact">Contact</a></p>
             `;
           }
         },

@@ -11,6 +11,8 @@ import {
   estimateTokens,
   TOKEN_LIMIT,
   matchSourceId,
+  toTargetSchema,
+  recordToTargetJson,
 } from "../lib/engine.js";
 import { inferDocument, applyJson, parseModelJson, probeNano, normalizeAvailability } from "../lib/nano.js";
 import { validateCompanyPayload } from "../lib/schema.js";
@@ -476,5 +478,230 @@ test("getLanguageModel handles InvalidStateError with retry and monitors downloa
     if (prev === undefined) delete globalThis.LanguageModel;
     else globalThis.LanguageModel = prev;
   }
+});
+
+test("validateCompanyPayload filters UI/nav items and feature bullets from executives and parses social object", () => {
+  const res = validateCompanyPayload({
+    company_name: "CloudTech Inc",
+    social: {
+      linkedin: "https://linkedin.com/company/cloudtech",
+      xing: "https://xing.com/pages/cloudtech",
+    },
+    executives: [
+      { name: "Products", role: "Navigation" },
+      { name: "Solutions", role: "Menu" },
+      { name: "Automated multi-currency payment processing", role: "Feature" },
+      { name: "40% gain in operational efficiency", role: "Metric" },
+      { name: "Careers", role: "Footer" },
+      { name: "Sarah Connor", role: "Chief Executive Officer" },
+      { name: "John Doe", role: "VP of Engineering" },
+    ],
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.payload.linkedin, "https://linkedin.com/company/cloudtech");
+  assert.equal(res.payload.xing, "https://xing.com/pages/cloudtech");
+  assert.equal(res.payload.executives.length, 2);
+  assert.equal(res.payload.executives[0].name, "Sarah Connor");
+  assert.equal(res.payload.executives[0].role, "Chief Executive Officer");
+  assert.equal(res.payload.executives[1].name, "John Doe");
+  assert.equal(res.payload.executives[1].role, "VP of Engineering");
+});
+
+test("scoreLinks prioritizes high-value paths (/contact, /about, /locations, /team, /company) and ignores traps", () => {
+  const links = [
+    { href: "https://acme.example/blog/how-to-scale-sensors", text: "Read our latest blog" },
+    { href: "https://acme.example/privacy-policy", text: "Privacy Policy" },
+    { href: "https://acme.example/terms-of-service", text: "Terms of Service" },
+    { href: "https://acme.example/cart", text: "Shopping Cart" },
+    { href: "https://acme.example/locations", text: "Global Offices & Locations" },
+    { href: "https://acme.example/company", text: "Company Overview" },
+    { href: "https://acme.example/team", text: "Executive Team" },
+    { href: "https://acme.example/contact", text: "Contact Us" },
+    { href: "https://acme.example/about", text: "About Us" },
+  ];
+
+  const scored = scoreLinks(links, "https://acme.example/");
+  
+  // High-value paths should score >= 0.7
+  const highValueHrefs = [
+    "https://acme.example/team",
+    "https://acme.example/locations",
+    "https://acme.example/company",
+    "https://acme.example/about",
+    "https://acme.example/contact",
+  ];
+  for (const href of highValueHrefs) {
+    const item = scored.find((s) => s.href === href);
+    assert.ok(item, `Link ${href} should be scored`);
+    assert.ok(item.score >= 0.7, `Link ${href} score should be >= 0.7, got ${item.score}`);
+  }
+
+  // Traps should be classified as trap/ignored with score <= 0.05
+  const trapHrefs = [
+    "https://acme.example/blog/how-to-scale-sensors",
+    "https://acme.example/privacy-policy",
+    "https://acme.example/terms-of-service",
+    "https://acme.example/cart",
+  ];
+  for (const href of trapHrefs) {
+    const item = scored.find((s) => s.href === href);
+    assert.ok(item, `Trap link ${href} should be found`);
+    assert.ok(item.score <= 0.05, `Trap ${href} score should be <= 0.05, got ${item.score}`);
+    assert.ok(item.reason.includes("trap"), `Trap ${href} reason should mention trap`);
+  }
+});
+
+test("extractFromMarkdown extracts multiple phone numbers and multiple addresses", () => {
+  const multiDoc = {
+    url: "https://acme.example/contact",
+    title: "Acme Corp | Contact & Locations",
+    lang: "en",
+    markdown: `# Acme Global
+
+Acme Global delivers high-precision optical sensors and embedded software platforms for industrial robotics worldwide.
+
+Headquarters: 100 Market Street, Suite 400, San Francisco, CA 94105
+European Office: Friedrichstraße 45, 10117 Berlin, Germany
+APAC Headquarters: 1-1-1 Marunouchi, Chiyoda-ku, Tokyo 100-0005, Japan
+
+Toll-Free Support: +1 800-555-0199
+US Office Phone: +1 415-555-0122
+EU Direct Line: +49 30 98765432
+General Inquiries: info@acmeworks.example
+
+- **Elena Rostova** — Chief Executive Officer
+- **David Chen** — Head of Hardware Engineering
+`,
+  };
+
+  const rec = extractFromMarkdown(multiDoc);
+
+  assert.ok(Array.isArray(rec.addresses), "rec.addresses should be an array");
+  assert.ok(rec.addresses.length >= 3, `Expected at least 3 addresses, got ${rec.addresses.length}`);
+  assert.ok(rec.addresses.some((a) => a.includes("Market Street")));
+  assert.ok(rec.addresses.some((a) => a.includes("Berlin") || a.includes("Friedrichstraße")));
+  assert.ok(rec.addresses.some((a) => a.includes("Tokyo") || a.includes("Marunouchi")));
+
+  assert.ok(Array.isArray(rec.phone_numbers), "rec.phone_numbers should be an array");
+  assert.ok(rec.phone_numbers.length >= 3, `Expected at least 3 phone numbers, got ${rec.phone_numbers.length}`);
+  assert.ok(rec.phone_numbers.some((p) => p.includes("800")));
+  assert.ok(rec.phone_numbers.some((p) => p.includes("415")));
+  assert.ok(rec.phone_numbers.some((p) => p.includes("49 30")));
+
+  // Synthesized description
+  assert.ok(rec.fields.description.value.includes("optical sensors"));
+  assert.equal(rec.executives.length, 2);
+});
+
+test("mergeRecords combines multi-value addresses and phone numbers across pages without duplicates", () => {
+  const page1 = extractFromMarkdown({
+    url: "https://acme.example/",
+    title: "Acme Corp",
+    lang: "en",
+    markdown: `# Acme Corp\n\nCloud infrastructure automation tools.\n\nAddress: 100 Market Street, San Francisco, CA\nPhone: +1 415-555-0100\nEmail: contact@acme.example\n`,
+  });
+
+  const page2 = extractFromMarkdown({
+    url: "https://acme.example/locations",
+    title: "Acme Corp - Locations",
+    lang: "en",
+    markdown: `# Locations\n\nRegional Office: 200 Broadway, New York, NY 10038\nSecondary Phone: +1 212-555-0199\n`,
+  });
+
+  const { merged } = mergeRecords(page1, page2);
+
+  assert.equal(merged.addresses.length, 2);
+  assert.ok(merged.addresses[0].includes("Market Street"));
+  assert.ok(merged.addresses[1].includes("Broadway"));
+
+  assert.equal(merged.phone_numbers.length, 2);
+  assert.ok(merged.phone_numbers[0].includes("415"));
+  assert.ok(merged.phone_numbers[1].includes("212"));
+});
+
+test("toTargetSchema formats extracted data strictly adhering to target output schema", () => {
+  const doc = {
+    url: "https://zenith.example/",
+    title: "Zenith Robotics",
+    lang: "en",
+    markdown: `# Zenith Robotics
+
+Zenith Robotics designs autonomous warehouse rovers and fleet management systems.
+
+Primary Address: 500 Technology Way, Austin, TX 78701
+Regional Office: 12 King Street, London EC2V 8AU, UK
+
+Phone: +1 512-555-0144
+Support Phone: +1 888-555-0199
+Email: inquiries@zenith.example
+
+- **Alex Rivera** — Chief Executive Officer
+- **Maya Patel** — Chief Technology Officer
+`,
+  };
+
+  const rec = extractFromMarkdown(doc);
+  const target = toTargetSchema(rec);
+
+  assert.deepEqual(Object.keys(target).sort(), [
+    "addresses",
+    "company_name",
+    "description",
+    "email",
+    "executives",
+    "industry",
+    "phone_numbers",
+    "website",
+  ].sort());
+
+  assert.equal(target.company_name, "Zenith Robotics");
+  assert.ok(target.description.includes("autonomous warehouse rovers"));
+  assert.ok(Array.isArray(target.addresses) && target.addresses.length >= 2);
+  assert.ok(Array.isArray(target.phone_numbers) && target.phone_numbers.length >= 2);
+  assert.equal(target.email, "inquiries@zenith.example");
+  assert.equal(target.website, "https://zenith.example");
+  assert.equal(target.executives.length, 2);
+  assert.equal(target.executives[0].name, "Alex Rivera");
+  assert.equal(target.executives[0].role, "Chief Executive Officer");
+
+  const targetJson = recordToTargetJson(rec);
+  const parsed = JSON.parse(targetJson);
+  assert.equal(parsed.company_name, "Zenith Robotics");
+  assert.ok(Array.isArray(parsed.addresses));
+  assert.ok(Array.isArray(parsed.phone_numbers));
+});
+
+test("validateCompanyPayload validates and sanitizes multi-value addresses and phone numbers", () => {
+  const valid = validateCompanyPayload({
+    company_name: "Apex Global",
+    industry: "Enterprise Software",
+    description: "Cloud security and identity management platform.",
+    addresses: [
+      "100 First St, Seattle, WA 98104",
+      "  ",
+      "250 Queen St, Melbourne VIC 3000  ",
+    ],
+    phone_numbers: [
+      "+1 206-555-0123",
+      "+61 3 9000 0000",
+    ],
+    email: "contact@apex.example",
+    website: "https://apex.example",
+    executives: [
+      { name: "Rachel Adams", role: "Chief Security Officer" },
+    ],
+  });
+
+  assert.equal(valid.ok, true);
+  assert.deepEqual(valid.payload.addresses, [
+    "100 First St, Seattle, WA 98104",
+    "250 Queen St, Melbourne VIC 3000",
+  ]);
+  assert.deepEqual(valid.payload.phone_numbers, [
+    "+1 206-555-0123",
+    "+61 3 9000 0000",
+  ]);
+  assert.equal(valid.payload.executives.length, 1);
 });
 

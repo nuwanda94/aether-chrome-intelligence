@@ -1,4 +1,12 @@
-import { FIELD_KEYS, FIELD_LABELS, maskValue, recordToJson, executivesToCsv } from "../lib/engine.js";
+import {
+  FIELD_KEYS,
+  FIELD_LABELS,
+  maskValue,
+  recordToJson,
+  recordToTargetJson,
+  toTargetSchema,
+  executivesToCsv,
+} from "../lib/engine.js";
 import { loadHistory, saveHistory, originFromRecord } from "../lib/history.js";
 import { ensureNano, probeNano } from "../lib/nano.js";
 
@@ -162,6 +170,20 @@ function render() {
   }
   if (!state.record) return empty();
   const rec = state.record;
+  const multiAddressesHtml =
+    rec.addresses && rec.addresses.length > 1
+      ? `<div class="card" style="margin-bottom:12px"><div class="k" style="font-size:11px;margin-bottom:6px">ALL LISTED ADDRESSES (${rec.addresses.length})</div>${rec.addresses
+          .map((a, idx) => `<div style="font-size:12px;margin-bottom:4px"><strong>${idx === 0 ? "HQ / Primary:" : "Regional / Branch:"}</strong> ${esc(a)}</div>`)
+          .join("")}</div>`
+      : "";
+
+  const multiPhonesHtml =
+    rec.phone_numbers && rec.phone_numbers.length > 1
+      ? `<div class="card" style="margin-bottom:12px"><div class="k" style="font-size:11px;margin-bottom:6px">ALL LISTED PHONE NUMBERS (${rec.phone_numbers.length})</div>${rec.phone_numbers
+          .map((p, idx) => `<div style="font-size:12px;margin-bottom:4px"><strong>${idx === 0 ? "Primary:" : "Secondary / Direct:"}</strong> ${esc(state.maskPii ? maskValue("phone", p) : p)}</div>`)
+          .join("")}</div>`
+      : "";
+
   const fields = FIELD_KEYS.map((key, i) => {
     const f = rec.fields[key];
     const val =
@@ -189,6 +211,8 @@ function render() {
       <span class="chip">${rec.complete ? t("complete") : t("partial")}</span>
       ${rec.cacheHit ? `<span class="chip">cache</span>` : ""}
     </div>
+    ${multiAddressesHtml}
+    ${multiPhonesHtml}
     ${fields}
     <div class="k" style="margin:16px 0 8px">${esc(t("cSuite"))}</div>
     ${execs || `<p class="muted">${esc(t("noExecutives"))}</p>`}
@@ -443,7 +467,7 @@ function download(name, text, type) {
 
 $("json-btn").addEventListener("click", () => {
   if (!state.record) return;
-  download("aether-record.json", recordToJson(state.record, state.maskPii), "application/json");
+  download("aether-record.json", recordToTargetJson(state.record, state.maskPii), "application/json");
 });
 $("md-btn").addEventListener("click", () => {
   if (!state.record) return;
@@ -460,7 +484,7 @@ $("csv-btn").addEventListener("click", () => {
 });
 $("copy-btn").addEventListener("click", async () => {
   if (!state.record) return;
-  const text = recordToJson(state.record, state.maskPii);
+  const text = recordToTargetJson(state.record, state.maskPii);
   try {
     await navigator.clipboard.writeText(text);
     toast(state.maskPii ? t("copiedMaskedJson") : t("copiedJson"));
