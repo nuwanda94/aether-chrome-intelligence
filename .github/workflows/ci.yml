@@ -149,17 +149,32 @@ jobs:
       - name: Create Unpacked Extension Zip Bundle
         run: |
           mkdir -p dist
-          zip -r dist/aether-extension.zip \
-            manifest.json \
-            _locales \
-            background \
-            content \
-            icons \
-            lib \
-            offscreen \
-            options \
-            sidepanel \
-            -x "*.DS_Store" "*__tests__*"
+          if command -v zip >/dev/null 2>&1; then
+            zip -r dist/aether-extension.zip \
+              manifest.json \
+              _locales \
+              background \
+              content \
+              icons \
+              lib \
+              offscreen \
+              options \
+              sidepanel \
+              -x "*.DS_Store" "*__tests__*"
+          else
+            python3 -c "import zipfile, os
+with zipfile.ZipFile('dist/aether-extension.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    for base in ['manifest.json', '_locales', 'background', 'content', 'icons', 'lib', 'offscreen', 'options', 'sidepanel']:
+        if os.path.isfile(base):
+            z.write(base)
+        else:
+            for root, dirs, files in os.walk(base):
+                for f in files:
+                    if '.DS_Store' not in f and '__tests__' not in root:
+                        fp = os.path.join(root, f)
+                        z.write(fp)
+"
+          fi
 
           echo "Zip bundle created:"
           ls -lh dist/aether-extension.zip
