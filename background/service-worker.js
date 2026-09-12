@@ -1,6 +1,7 @@
 import { extractFromMarkdown, hashUrl, maskRecordForCache } from "../lib/engine.js";
 import { readCacheRecord, toCachePayload } from "../lib/cache.js";
 import { runHarness } from "../lib/harness.js";
+import { CrawlerState } from "../lib/crawler-state.js";
 
 const OFFSCREEN_URL = chrome.runtime.getURL("offscreen/offscreen.html");
 const MAX_HEAL_TABS = 2;
@@ -335,6 +336,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.type === "AETHER_CLEAR_CACHE") {
     chrome.storage.local.clear().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg?.type === "AETHER_GET_CRAWLER_STATE") {
+    const cs = new CrawlerState();
+    cs.restore().then(() => sendResponse({ ok: true, state: cs.state })).catch((err) => sendResponse({ ok: false, error: err?.message }));
+    return true;
+  }
+  if (msg?.type === "AETHER_CLEAR_CRAWLER_STATE") {
+    const cs = new CrawlerState();
+    cs.clear().then(() => sendResponse({ ok: true })).catch((err) => sendResponse({ ok: false, error: err?.message }));
     return true;
   }
   return false;

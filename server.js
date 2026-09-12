@@ -8,6 +8,10 @@ import {
   mergeRecords,
   toTargetSchema,
   recordToTargetJson,
+  canonicalizeUrl,
+  deduplicateAddresses,
+  deduplicatePhones,
+  sanitizeExecutive,
 } from "./lib/engine.js";
 
 const app = express();
@@ -42,11 +46,9 @@ function extractHtmlLinks(html, baseUrl) {
     const rawHref = m[1].trim();
     const rawText = m[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
     if (!rawHref || rawHref.startsWith("javascript:") || rawHref.startsWith("#")) continue;
-    try {
-      const abs = new URL(rawHref, baseUrl).toString();
-      links.push({ href: abs, text: rawText });
-    } catch {
-      /* ignore invalid URLs */
+    const canon = canonicalizeUrl(rawHref, baseUrl);
+    if (canon) {
+      links.push({ href: canon, text: rawText });
     }
   }
   return links;
@@ -240,6 +242,15 @@ Ensure temperature setting is strictly respected. Preserve Unicode. Output empty
       const text = response.text?.trim();
       if (text) {
         const parsed = JSON.parse(text);
+        if (Array.isArray(parsed.executives)) {
+          parsed.executives = parsed.executives.map(sanitizeExecutive).filter(Boolean);
+        }
+        if (Array.isArray(parsed.addresses)) {
+          parsed.addresses = deduplicateAddresses([], parsed.addresses);
+        }
+        if (Array.isArray(parsed.phone_numbers)) {
+          parsed.phone_numbers = deduplicatePhones([], parsed.phone_numbers);
+        }
         return {
           ok: true,
           engine: "gemini-3.8-flash",
