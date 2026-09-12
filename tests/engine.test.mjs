@@ -433,3 +433,48 @@ Anna Schmidt — Geschäftsführerin
   assert.equal(jp.executives[0].name, "山田 太郎");
   assert.equal(jp.executives[0].role, "代表取締役社長");
 });
+
+test("getLanguageModel handles InvalidStateError with retry and monitors download progress", async () => {
+  const prev = globalThis.LanguageModel;
+  let attempts = 0;
+  const progressEvents = [];
+
+  globalThis.LanguageModel = {
+    availability: async () => "downloadable",
+    create: async (opts) => {
+      attempts++;
+      if (opts?.monitor) {
+        let listener;
+        opts.monitor({
+          addEventListener: (evt, cb) => {
+            if (evt === "downloadprogress") listener = cb;
+          },
+        });
+        if (listener) {
+          listener({ loaded: 50, total: 100 });
+        }
+      }
+      if (attempts === 1) {
+        const err = new Error("Model daemon initializing");
+        err.name = "InvalidStateError";
+        throw err;
+      }
+      return {
+        prompt: async () => JSON.stringify({ company_name: "Recovered Inc" }),
+        destroy() {},
+      };
+    },
+  };
+
+  try {
+    const { getLanguageModel } = await import("../lib/nano.js");
+    const session = await getLanguageModel((pct) => progressEvents.push(pct));
+    assert.ok(session);
+    assert.ok(attempts > 1, "Should have retried after InvalidStateError");
+    assert.ok(progressEvents.includes(0.5), "Should record 50% download progress");
+  } finally {
+    if (prev === undefined) delete globalThis.LanguageModel;
+    else globalThis.LanguageModel = prev;
+  }
+});
+

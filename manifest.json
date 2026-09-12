@@ -5,7 +5,7 @@
   "short_name": "__MSG_extShortName__",
   "version": "2.1.0",
   "description": "__MSG_extDescription__",
-  "minimum_chrome_version": "123",
+  "minimum_chrome_version": "128",
   "permissions": [
     "sidePanel",
     "storage",
