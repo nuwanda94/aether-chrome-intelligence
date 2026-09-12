@@ -1,0 +1,6 @@
+{
+  "name": "Aether",
+  "description": "On-device company intelligence Chrome extension with Gemini Nano extraction, self-healing navigation, and source-traced records.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

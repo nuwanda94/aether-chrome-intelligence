@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aether — Autonomous Company Intelligence</title>
+    <meta name="description" content="On-device company intelligence Chrome extension with Gemini Nano extraction, self-healing navigation, and source-traced records." />
+    <meta property="og:title" content="Aether — Autonomous Company Intelligence" />
+    <meta property="og:description" content="On-device company intelligence Chrome extension with Gemini Nano extraction, self-healing navigation, and source-traced records." />
+    <link rel="icon" type="image/png" href="/icons/icon32.png" />
+    <style>
+      :root {
+        --ink: #0c0d0f;
+        --paper: #f3efe6;
+        --paper-2: #e8e2d4;
+        --rule: #d9d1c0;
+        --pine: #2c5548;
+        --pine-hover: #224238;
+        --steel: #8a939e;
+        --warm: #1a1814;
+        --muted: #6b6458;
+        --mid: #9a6b2f;
+        --low: #8f3d38;
+        --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+        --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; font-family: var(--font); background: var(--paper-2); color: var(--warm); overflow: hidden; }
+      
+      /* Layout */
+      .app-layout {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      
+      /* App Header */
+      .app-header {
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex: none;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand img {
+        width: 24px;
+        height: 24px;
+      }
+      .brand-title {
+        font-family: var(--serif);
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+      .badge-tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        background: color-mix(in oklab, var(--pine) 15%, transparent);
+        color: var(--pine);
+        padding: 3px 8px;
+        border-radius: 99px;
+        font-weight: 600;
+      }
+      
+      /* Browser Chrome Toolbar */
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        max-width: 680px;
+        background: var(--paper-2);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        padding: 4px 10px;
+      }
+      .tab-select-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tab-select-btn:hover {
+        background: color-mix(in oklab, var(--rule) 40%, transparent);
+        color: var(--ink);
+      }
+      .tab-select-btn.active {
+        background: var(--paper);
+        border-color: var(--rule);
+        color: var(--pine);
+        font-weight: 600;
+      }
+      .address-box {
+        flex: 1;
+        background: transparent;
+        border: none;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        outline: none;
+      }
+      
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn {
+        border: 1px solid var(--rule);
+        background: var(--paper);
+        color: var(--warm);
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+      }
+      .btn:hover {
+        background: var(--paper-2);
+      }
+      .btn-primary {
+        background: var(--pine);
+        border-color: var(--pine);
+        color: var(--paper);
+      }
+      .btn-primary:hover {
+        background: var(--pine-hover);
+      }
+      
+      /* Split Workspace */
+      .workspace {
+        display: flex;
+        flex: 1;
+        height: calc(100vh - 54px);
+        overflow: hidden;
+      }
+      
+      /* Web Page Area */
+      .web-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #ffffff;
+        border-right: 1px solid var(--rule);
+        overflow-y: auto;
+        position: relative;
+      }
+      .web-header-banner {
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .web-content-view {
+        padding: 32px 40px;
+        max-width: 820px;
+        margin: 0 auto;
+        width: 100%;
+        line-height: 1.6;
+        color: #1a1a1a;
+      }
+      .web-content-view h1 {
+        font-family: var(--serif);
+        font-size: 32px;
+        margin-bottom: 12px;
+        color: #0c0d0f;
+      }
+      .web-content-view h2 {
+        font-family: var(--serif);
+        font-size: 20px;
+        margin-top: 24px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 4px;
+      }
+      .web-content-view p {
+        margin-bottom: 16px;
+        font-size: 15px;
+      }
+      .web-content-view ul {
+        margin-left: 20px;
+        margin-bottom: 20px;
+      }
+      .web-content-view li {
+        margin-bottom: 6px;
+      }
+      .web-content-view a {
+        color: var(--pine);
+        text-decoration: underline;
+      }
+      .web-content-view .info-card {
+        background: #fbfbf9;
+        border: 1px solid #e2ded5;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 16px 0;
+      }
+      
+      /* Side Panel Area */
+      .sidepanel-container {
+        width: 440px;
+        flex: none;
+        background: var(--paper);
+        display: flex;
+        flex-direction: column;
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.05);
+        z-index: 10;
+      }
+      .sidepanel-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      /* Modal */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(12, 13, 15, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      .modal-backdrop[hidden] {
+        display: none;
+      }
+      .modal-dialog {
+        background: var(--paper);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+        width: min(90vw, 620px);
+        max-height: 85vh;
+        overflow: auto;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .modal-header h3 {
+        font-family: var(--serif);
+        font-size: 18px;
+      }
+      .modal-body {
+        padding: 20px;
+      }
+      .modal-close {
+        background: transparent;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: var(--muted);
+      }
+
+      /* Responsive */
+      @media (max-width: 900px) {
+        .workspace {
+          flex-direction: column;
+        }
+        .sidepanel-container {
+          width: 100%;
+          height: 60%;
+        }
+        .web-container {
+          height: 40%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-layout">
+      <!-- Top Bar -->
+      <header class="app-header">
+        <div class="brand">
+          <img src="/icons/icon48.png" alt="Aether" />
+          <span class="brand-title">Aether</span>
+          <span class="badge-tag">Chrome Side Panel Active</span>
+        </div>
+
+        <!-- Sample Sites Browser Selector -->
+        <div class="browser-bar">
+          <button type="button" class="tab-select-btn active" data-site="acme">Acme Corp (EN)</button>
+          <button type="button" class="tab-select-btn" data-site="beispiel">Beispiel GmbH (DE)</button>
+          <button type="button" class="tab-select-btn" data-site="aether-jp">株式会社アether (JP)</button>
+          <button type="button" class="tab-select-btn" data-site="custom">Custom Site</button>
+          <input type="text" id="active-url" class="address-box" value="https://acme.example/" readonly />
+        </div>
+
+        <!-- Header Actions -->
+        <div class="header-actions">
+          <button type="button" class="btn" id="open-options-btn">Options</button>
+          <a href="/sidepanel/index.html" target="_blank" class="btn" title="Open Sidepanel in standalone view">Full Panel ↗</a>
+        </div>
+      </header>
+
+      <!-- Main Split View -->
+      <div class="workspace">
+        <!-- Active Web Page -->
+        <main class="web-container" id="web-page-root">
+          <div class="web-header-banner">
+            <span id="page-status-label">Inspecting live DOM: <strong id="page-title-label">Acme Corp | Home</strong></span>
+            <span style="font-family: var(--mono); font-size: 11px;">Click 'Extract' in the side panel</span>
+          </div>
+
+          <article class="web-content-view" id="active-dom-content">
+            <!-- Dynamic Web Content will be rendered here -->
+          </article>
+        </main>
+
+        <!-- Aether Side Panel -->
+        <aside class="sidepanel-container">
+          <iframe id="sidepanel-frame" class="sidepanel-iframe" src="/sidepanel/index.html" title="Aether Side Panel"></iframe>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Options Modal -->
+    <div id="options-modal" class="modal-backdrop" hidden>
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Aether Options</h3>
+          <button type="button" class="modal-close" id="close-modal-btn">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+          <iframe src="/options/index.html" style="width: 100%; height: 500px; border: none;"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/lib/chrome-shim.js"></script>
+    <script src="/content/content-script.js"></script>
+    <script>
+      // Sample Company Sites from engine test suite
+      const SAMPLE_SITES = {
+        acme: {
+          url: "https://acme.example/",
+          title: "Acme Corp | Home",
+          lang: "en",
+          subpages: {
+            "https://acme.example/leadership": {
+              url: "https://acme.example/leadership",
+              title: "Acme Corp — Leadership Team",
+              lang: "en",
+              markdown: `# Acme Corp Leadership\n\n- **Jane Doe** — Chief Executive Officer — jane.doe@acme.example\n- **John Smith** — Chief Technology Officer — john.smith@acme.example\n- **Sarah Jenkins** — Chief Financial Officer — s.jenkins@acme.example\n`,
+              links: [],
+            },
+            "https://acme.example/about": {
+              url: "https://acme.example/about",
+              title: "About Acme Corp",
+              lang: "en",
+              markdown: `# About Acme Corp\n\nFounded in 2012, Acme Corp manufactures smart IoT sensors and connected hardware for enterprise facilities.\n`,
+              links: [],
+            }
+          },
+          render() {
+            return `
+              <h1 id="acme-h1">Acme Corp</h1>
+              <p class="lead">Acme Corp builds industrial sensors for global manufacturers and ships from three continents.</p>
+              
+              <div class="info-card">
+                <h2>Corporate Headquarters</h2>
+                <p><strong>Address:</strong> 100 Market Street, San Francisco, CA 94105</p>
+                <p><strong>Contact:</strong> <a href="mailto:press@acme.example">press@acme.example</a> or <a href="tel:+14155550199">+1 415-555-0199</a></p>
+                <p><strong>Website:</strong> <a href="https://acme.example">https://acme.example</a></p>
+                <p><strong>LinkedIn:</strong> <a href="https://linkedin.com/company/acme-corp">linkedin.com/company/acme-corp</a></p>
+              </div>
+
+              <h2>Executive Leadership</h2>
+              <p>Meet our executive team driving innovation worldwide:</p>
+              <ul>
+                <li><strong>Jane Doe</strong> — Chief Executive Officer (<a href="mailto:jane.doe@acme.example">jane.doe@acme.example</a>)</li>
+                <li><strong>John Smith</strong> — Chief Technology Officer (<a href="mailto:john.smith@acme.example">john.smith@acme.example</a>)</li>
+                <li><strong>Sarah Jenkins</strong> — Chief Financial Officer</li>
+              </ul>
+
+              <h2>Navigation</h2>
+              <p>Explore more details: <a href="https://acme.example/leadership">Leadership</a> · <a href="https://acme.example/about">About Us</a></p>
+            `;
+          }
+        },
+        beispiel: {
+          url: "https://beispiel.de/",
+          title: "Beispiel GmbH — Über uns",
+          lang: "de",
+          subpages: {
+            "https://beispiel.de/vorstand": {
+              url: "https://beispiel.de/vorstand",
+              title: "Beispiel GmbH — Vorstand",
+              lang: "de",
+              markdown: `# Beispiel GmbH Vorstand\n\n- **Dr. Anna Weber** — Geschäftsführerin — anna.weber@beispiel.de\n- **Klaus Becker** — Technischer Leiter — k.becker@beispiel.de\n`,
+              links: [],
+            },
+            "https://beispiel.de/ueber-uns": {
+              url: "https://beispiel.de/ueber-uns",
+              title: "Über uns — Beispiel GmbH",
+              lang: "de",
+              markdown: `# Über Beispiel GmbH\n\nPräzisionsmesstechnik für höchste industrielle Anforderungen seit 1998.\n`,
+              links: [],
+            }
+          },
+          render() {
+            return `
+              <h1>Beispiel GmbH</h1>
+              <p class="lead">Beispiel GmbH entwickelt Messsysteme für die Industrie und hat den Sitz in München.</p>
+              
+              <div class="info-card">
+                <h2>Impressum & Standort</h2>
+                <p><strong>Anschrift:</strong> 10115 Berlin, Friedrichstraße 1, Deutschland</p>
+                <p><strong>E-Mail:</strong> <a href="mailto:hallo@beispiel.de">hallo@beispiel.de</a></p>
+                <p><strong>Telefon:</strong> <a href="tel:+493012345678">+49 30 12345678</a></p>
+                <p><strong>Xing:</strong> <a href="https://xing.com/pages/beispiel-gmbh">xing.com/pages/beispiel-gmbh</a></p>
+              </div>
+
+              <h2>Geschäftsführung</h2>
+              <ul>
+                <li><strong>Dr. Anna Weber</strong> — Geschäftsführerin (<a href="mailto:anna.weber@beispiel.de">anna.weber@beispiel.de</a>)</li>
+                <li><strong>Klaus Becker</strong> — Technischer Leiter (CTO)</li>
+              </ul>
+
+              <h2>Verweise</h2>
+              <p><a href="https://beispiel.de/vorstand">Vorstand</a> · <a href="https://beispiel.de/ueber-uns">Über uns</a></p>
+            `;
+          }
+        },
+        "aether-jp": {
+          url: "https://example.co.jp/",
+          title: "株式会社アether | 会社概要",
+          lang: "ja",
+          subpages: {
+            "https://example.co.jp/leadership": {
+              url: "https://example.co.jp/leadership",
+              title: "役員紹介 | 株式会社アether",
+              lang: "ja",
+              markdown: `# 役員紹介\n\n- **山田 太郎** — 代表取締役社長 — taro@example.co.jp\n- **佐藤 花子** — 取締役CTO — hanako@example.co.jp\n`,
+              links: [],
+            }
+          },
+          render() {
+            return `
+              <h1>株式会社アether</h1>
+              <p class="lead">東京都千代田区丸の内1-1-1 〒100-0005 に本社を置くソフトウェア企業です。製品は日本語のまま記録します。</p>
+              
+              <div class="info-card">
+                <h2>会社概要</h2>
+                <p><strong>商号:</strong> 株式会社アether (Aether Inc.)</p>
+                <p><strong>本社所在地:</strong> 〒100-0005 東京都千代田区丸の内1-1-1</p>
+                <p><strong>お問い合わせ:</strong> <a href="mailto:info@example.co.jp">info@example.co.jp</a></p>
+                <p><strong>電話番号:</strong> <a href="tel:+81312345678">+81 3 1234 5678</a></p>
+                <p><strong>ウェブサイト:</strong> <a href="https://example.co.jp">https://example.co.jp</a></p>
+              </div>
+
+              <h2>役員一覧</h2>
+              <ul>
+                <li><strong>山田 太郎</strong> — 代表取締役社長 (<a href="mailto:taro@example.co.jp">taro@example.co.jp</a>)</li>
+                <li><strong>佐藤 花子</strong> — 取締役CTO</li>
+              </ul>
+
+              <h2>関連リンク</h2>
+              <p><a href="https://example.co.jp/about">会社案内</a> · <a href="https://example.co.jp/leadership">役員紹介</a></p>
+            `;
+          }
+        },
+        custom: {
+          url: "https://mycompany.example/",
+          title: "My Custom Company | Home",
+          lang: "en",
+          subpages: {},
+          render() {
+            return `
+              <h1>Custom Company Workspace</h1>
+              <p class="lead">Test Aether against your own custom company HTML content or URL.</p>
+              
+              <div class="info-card">
+                <h2>Company Info Editor</h2>
+                <p style="margin-bottom: 8px;">Edit any text directly below, then click <strong>Extract</strong> in the Aether side panel:</p>
+                <div contenteditable="true" style="padding: 12px; border: 1px dashed var(--rule); border-radius: 6px; background: white; min-height: 120px;">
+                  <h3>Apex Robotics Inc.</h3>
+                  <p>Autonomous warehouse logistics and robotics systems.</p>
+                  <p>Address: 450 Technology Square, Cambridge, MA 02139</p>
+                  <p>Email: contact@apexrobotics.example</p>
+                  <p>Phone: +1 617-555-0144</p>
+                  <p>Executives: <strong>Elena Rostova</strong> — Chief Executive Officer</p>
+                </div>
+              </div>
+            `;
+          }
+        }
+      };
+
+      let currentSiteKey = "acme";
+
+      function loadSite(key) {
+        currentSiteKey = key;
+        const site = SAMPLE_SITES[key] || SAMPLE_SITES.acme;
+        document.getElementById("active-url").value = site.url;
+        document.getElementById("page-title-label").textContent = site.title;
+        document.getElementById("active-dom-content").innerHTML = site.render();
+
+        // Update buttons
+        document.querySelectorAll(".tab-select-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.site === key);
+        });
+
+        // Inform Aether shim of active tab state
+        if (window.setAetherActiveTab) {
+          window.setAetherActiveTab({
+            id: 1,
+            url: site.url,
+            title: site.title,
+            active: true,
+          });
+        }
+
+        // Notify sidepanel frame to restore history for this origin if open
+        const sideFrame = document.getElementById("sidepanel-frame");
+        if (sideFrame && sideFrame.contentWindow) {
+          sideFrame.contentWindow.postMessage({ type: "AETHER_TAB_CHANGED", url: site.url }, "*");
+        }
+      }
+
+      // Tab selector events
+      document.querySelectorAll(".tab-select-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          loadSite(btn.dataset.site);
+        });
+      });
+
+      // Hook up active doc provider for the Aether Shim
+      window.getAetherActiveDoc = function () {
+        const site = SAMPLE_SITES[currentSiteKey];
+        const contentEl = document.getElementById("active-dom-content");
+        
+        // Use the real content-script serialize() logic on the live DOM
+        if (typeof serialize === "function") {
+          const doc = serialize();
+          doc.url = site.url;
+          doc.title = site.title;
+          doc.lang = site.lang;
+          return doc;
+        }
+
+        return {
+          url: site.url,
+          title: site.title,
+          lang: site.lang,
+          markdown: contentEl.innerText,
+          links: [],
+          sources: [],
+        };
+      };
+
+      window.getAetherSubPageDoc = function (url) {
+        const site = SAMPLE_SITES[currentSiteKey];
+        if (site && site.subpages && site.subpages[url]) {
+          return site.subpages[url];
+        }
+        return null;
+      };
+
+      window.highlightAetherSource = function (sourceId, snippet, kind) {
+        if (typeof highlight === "function") {
+          return highlight(sourceId, snippet, kind);
+        }
+        return false;
+      };
+
+      window.openAetherOptions = function () {
+        document.getElementById("options-modal").hidden = false;
+      };
+
+      document.getElementById("open-options-btn").addEventListener("click", () => {
+        document.getElementById("options-modal").hidden = false;
+      });
+
+      document.getElementById("close-modal-btn").addEventListener("click", () => {
+        document.getElementById("options-modal").hidden = true;
+      });
+
+      // Initial load
+      loadSite("acme");
+    </script>
+  </body>
+</html>

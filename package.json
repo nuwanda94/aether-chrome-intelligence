@@ -5,6 +5,12 @@
   "type": "module",
   "description": "Aether company-intelligence Chrome MV3 extension",
   "scripts": {
+    "dev": "node server.js",
+    "build": "node -e 'console.log(\"Build ready\")'",
+    "start": "node server.js",
     "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }
