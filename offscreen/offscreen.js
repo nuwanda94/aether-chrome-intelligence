@@ -67,7 +67,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           "nano",
           "Fell back to heuristic",
           "warn",
-          result.engine || "heuristic",
+          result.nanoError || result.engine || "heuristic",
         );
       }
       sendResponse({ ok: true, ...result });

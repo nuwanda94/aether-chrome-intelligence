@@ -12,7 +12,7 @@ import {
   TOKEN_LIMIT,
   matchSourceId,
 } from "../lib/engine.js";
-import { inferDocument, applyJson } from "../lib/nano.js";
+import { inferDocument, applyJson, parseModelJson, probeNano, normalizeAvailability } from "../lib/nano.js";
 import { validateCompanyPayload } from "../lib/schema.js";
 
 const EN_DOC = {
@@ -242,14 +242,25 @@ test("validateCompanyPayload accepts known string fields and named executives", 
   assert.equal(checked.payload.executives[0].name, "Jane Doe");
 });
 
-test("validateCompanyPayload rejects wrong field types", () => {
+test("validateCompanyPayload rejects non-objects, coerces loose field types", () => {
   assert.equal(validateCompanyPayload(null).ok, false);
-  assert.equal(validateCompanyPayload({ company_name: 12 }).ok, false);
-  assert.equal(validateCompanyPayload({ executives: { name: "Pat" } }).ok, false);
-  assert.equal(validateCompanyPayload({ executives: [{ name: "Pat", email: ["x"] }] }).ok, false);
+  assert.equal(validateCompanyPayload("nope").ok, false);
+  const num = validateCompanyPayload({ company_name: 12, email: null });
+  assert.equal(num.ok, true);
+  assert.equal(num.payload.company_name, "12");
+  assert.equal(num.payload.email, "");
+  const execObj = validateCompanyPayload({ executives: { name: "Pat" } });
+  assert.equal(execObj.ok, true);
+  assert.equal(execObj.payload.executives.length, 0);
+  const execEmail = validateCompanyPayload({
+    executives: [{ name: "Pat", email: ["x"] }],
+  });
+  assert.equal(execEmail.ok, true);
+  assert.equal(execEmail.payload.executives[0].name, "Pat");
+  assert.equal(execEmail.payload.executives[0].email, "");
 });
 
-test("applyJson uses validated payload and infer falls back on invalid Nano JSON", async () => {
+test("applyJson overlays Nano fields; ready session is used even with coerced JSON", async () => {
   const valid = validateCompanyPayload({
     company_name: "Nano Co",
     executives: [{ name: "Ada Lovelace", role: "CTO" }],
@@ -263,15 +274,101 @@ test("applyJson uses validated payload and infer falls back on invalid Nano JSON
   globalThis.LanguageModel = {
     availability: async () => "available",
     create: async () => ({
-      prompt: async () => JSON.stringify({ company_name: 404, executives: "nope" }),
+      prompt: async () =>
+        JSON.stringify({ company_name: 404, email: null, executives: "nope" }),
       destroy() {},
     }),
   };
   try {
     const { record, engine } = await inferDocument(EN_DOC);
-    assert.equal(engine, "heuristic");
-    assert.equal(record.fields.company_name.value, "Acme Corp");
+    assert.equal(engine, "nano");
+    assert.equal(record.fields.company_name.value, "404");
     assert.equal(record.executives[0].name, "Jane Doe");
+  } finally {
+    if (prev === undefined) delete globalThis.LanguageModel;
+    else globalThis.LanguageModel = prev;
+  }
+});
+
+test("parseModelJson accepts fenced JSON and preamble", () => {
+  const obj = { company_name: "Acme", executives: [{ name: "Ada", role: "CTO" }] };
+  assert.equal(parseModelJson(JSON.stringify(obj)).company_name, "Acme");
+  const fenced = "Here you go:\n```json\n" + JSON.stringify(obj) + "\n```\n";
+  assert.equal(parseModelJson(fenced).company_name, "Acme");
+  assert.equal(parseModelJson("not json at all"), null);
+});
+
+test("inferDocument uses Nano when availability is ready and JSON is fenced", async () => {
+  const prev = globalThis.LanguageModel;
+  globalThis.LanguageModel = {
+    availability: async () => "readily",
+    create: async () => ({
+      prompt: async () =>
+        "```json\n" +
+        JSON.stringify({
+          company_name: "Nano Co",
+          executives: [{ name: "Ada Lovelace", role: "CTO" }],
+        }) +
+        "\n```",
+      destroy() {},
+    }),
+  };
+  try {
+    assert.equal(normalizeAvailability("readily"), "available");
+    const probe = await probeNano();
+    assert.equal(probe.status, "available");
+    const { record, engine } = await inferDocument(EN_DOC);
+    assert.equal(engine, "nano");
+    assert.equal(record.fields.company_name.value, "Nano Co");
+    assert.equal(record.executives[0].name, "Ada Lovelace");
+  } finally {
+    if (prev === undefined) delete globalThis.LanguageModel;
+    else globalThis.LanguageModel = prev;
+  }
+});
+
+test("inferDocument consumes async iterable prompt output", async () => {
+  const prev = globalThis.LanguageModel;
+  const payload = JSON.stringify({
+    company_name: "Stream Co",
+    executives: [{ name: "Pat Stream", role: "CEO" }],
+  });
+  globalThis.LanguageModel = {
+    availability: async () => "available",
+    create: async () => ({
+      prompt: async () =>
+        (async function* () {
+          yield payload.slice(0, 12);
+          yield payload.slice(12);
+        })(),
+      destroy() {},
+    }),
+  };
+  try {
+    const { record, engine } = await inferDocument(EN_DOC);
+    assert.equal(engine, "nano");
+    assert.equal(record.fields.company_name.value, "Stream Co");
+    assert.equal(record.executives[0].name, "Pat Stream");
+  } finally {
+    if (prev === undefined) delete globalThis.LanguageModel;
+    else globalThis.LanguageModel = prev;
+  }
+});
+
+test("inferDocument falls back only when the model output is unusable", async () => {
+  const prev = globalThis.LanguageModel;
+  globalThis.LanguageModel = {
+    availability: async () => "available",
+    create: async () => ({
+      prompt: async () => "I cannot extract that.",
+      destroy() {},
+    }),
+  };
+  try {
+    const { record, engine, nanoError } = await inferDocument(EN_DOC);
+    assert.equal(engine, "heuristic");
+    assert.equal(nanoError, "invalid-json");
+    assert.equal(record.fields.company_name.value, "Acme Corp");
   } finally {
     if (prev === undefined) delete globalThis.LanguageModel;
     else globalThis.LanguageModel = prev;
