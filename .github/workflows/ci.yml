@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-validate:
+    name: Lint & Structural Validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Static Syntax Analysis (Node Check)
+        run: npm run lint
+
+      - name: JSON Schema & Locales Parse Check
+        run: |
+          node -e "
+            const fs = require('fs');
+            const files = [
+              'manifest.json',
+              'package.json',
+              'metadata.json',
+              '_locales/en/messages.json',
+              '_locales/de/messages.json',
+              '_locales/ja/messages.json'
+            ];
+            for (const f of files) {
+              if (fs.existsSync(f)) {
+                JSON.parse(fs.readFileSync(f, 'utf8'));
+                console.log('✓ Valid JSON:', f);
+              }
+            }
+          "
+
+  test:
+    name: Unit & Regression Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run Test Suite (Node Test Runner)
+        run: npm test
+
+  manifest-v3-audit:
+    name: Chrome Manifest V3 Compliance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Validate Manifest V3 Structure & Asset References
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+
+            if (manifest.manifest_version !== 3) {
+              throw new Error('Manifest version must be 3, found: ' + manifest.manifest_version);
+            }
+
+            // Verify background service worker entry
+            const swPath = manifest.background?.service_worker;
+            if (!swPath || !fs.existsSync(swPath)) {
+              throw new Error('Background service worker not found at: ' + swPath);
+            }
+
+            // Verify side panel
+            const spPath = manifest.side_panel?.default_path;
+            if (!spPath || !fs.existsSync(spPath)) {
+              throw new Error('Side panel path not found at: ' + spPath);
+            }
+
+            // Verify options
+            const optPath = manifest.options_ui?.page;
+            if (!optPath || !fs.existsSync(optPath)) {
+              throw new Error('Options page not found at: ' + optPath);
+            }
+
+            // Verify icon assets
+            const iconSizes = [16, 32, 48, 128];
+            for (const size of iconSizes) {
+              const iconPath = manifest.icons?.[size];
+              if (!iconPath || !fs.existsSync(iconPath)) {
+                throw new Error('Icon size ' + size + ' not found at: ' + iconPath);
+              }
+            }
+
+            // Verify Content Security Policy compliance
+            const csp = manifest.content_security_policy?.extension_pages;
+            if (!csp || csp.includes('unsafe-eval')) {
+              throw new Error('CSP violation: unsafe-eval is forbidden in MV3 production: ' + csp);
+            }
+
+            console.log('✓ Manifest V3 integrity check passed successfully.');
+          "
+
+  package-check:
+    name: Extension Distribution Artifact Build
+    runs-on: ubuntu-latest
+    needs: [lint-and-validate, test, manifest-v3-audit]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Unpacked Extension Zip Bundle
+        run: |
+          mkdir -p dist
+          zip -r dist/aether-extension.zip \
+            manifest.json \
+            _locales \
+            background \
+            content \
+            icons \
+            lib \
+            offscreen \
+            options \
+            sidepanel \
+            -x "*.DS_Store" "*__tests__*"
+
+          echo "Zip bundle created:"
+          ls -lh dist/aether-extension.zip
+
+      - name: Upload Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aether-mv3-extension
+          path: dist/aether-extension.zip
+          retention-days: 14
